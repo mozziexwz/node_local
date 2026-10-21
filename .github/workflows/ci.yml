@@ -1,0 +1,59 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # The synced executor tests run the remote shell and Python scripts, so they
+  # need Linux, as on the website's CI.
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+
+      - name: Test
+        run: go test -count=1 ./...
+
+      # The synced files must equal the website release recorded in UPSTREAM.json.
+      - name: Check synced files
+        run: |
+          git clone --quiet --filter=blob:none --no-checkout "$(jq -r .repository UPSTREAM.json).git" "$RUNNER_TEMP/node"
+          go run ./scripts/syncnode -check -source "$RUNNER_TEMP/node"
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.27.1'
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -count=1 ./...
+
+      # Command-line tool for testing the engine against a real VPS.
+      - name: Build msboost-local-cli
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_TYPE -eq 'tag') { $version = $env:GITHUB_REF_NAME } else { $version = 'dev-' + $env:GITHUB_SHA.Substring(0, 7) }
+          go build -trimpath -ldflags "-X main.version=$version" -o build/cli/msboost-local-cli.exe ./cmd/msboost-local-cli
+          if ($LASTEXITCODE -ne 0) { throw 'build failed' }
+          (Get-ChildItem build/cli -File) | ForEach-Object { '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash, $_.Name } | Set-Content build/cli/SHA256SUMS.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msboost-local-cli-windows-x64
+          path: build/cli/
+          if-no-files-found: error
