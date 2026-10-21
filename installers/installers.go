@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"encoding/hex"
 	"encoding/json"
+	"regexp"
 
 	"github.com/mozziexwz/node_local/internal/executor"
 )
@@ -28,6 +29,29 @@ func NodeScript() executor.Asset {
 type gostPin struct {
 	URL    string `json:"url"`
 	SHA256 string `json:"sha256"`
+}
+
+var pinnedEngine = regexp.MustCompile(`(?m)^readonly PINNED_ENGINE_VERSION="(v[0-9.]+)"$`)
+var gostRelease = regexp.MustCompile(`/download/(v[0-9.]+)/`)
+
+// EngineVersion is the node engine release the installer pins.
+func EngineVersion() string {
+	if m := pinnedEngine.FindSubmatch(nodeScript); m != nil {
+		return string(m[1])
+	}
+	return ""
+}
+
+// GostVersion is the pinned GOST release.
+func GostVersion() string {
+	var pins map[string]gostPin
+	if json.Unmarshal(gostJSON, &pins) != nil {
+		return ""
+	}
+	if m := gostRelease.FindStringSubmatch(pins["amd64"].URL); m != nil {
+		return m[1]
+	}
+	return ""
 }
 
 // NewEngine returns an executor engine with the pinned GOST archives, which

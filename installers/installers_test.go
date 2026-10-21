@@ -44,6 +44,13 @@ func TestSyncedFilesMatchUpstream(t *testing.T) {
 	}
 }
 
+func TestVersions(t *testing.T) {
+	version := regexp.MustCompile(`^v\d+\.\d+\.\d+$`)
+	if !version.MatchString(EngineVersion()) || !version.MatchString(GostVersion()) {
+		t.Fatalf("engine %q, GOST %q", EngineVersion(), GostVersion())
+	}
+}
+
 func TestEngineHasGostPins(t *testing.T) {
 	e := NewEngine()
 	url := regexp.MustCompile(`^https://github\.com/go-gost/gost/releases/download/v`)

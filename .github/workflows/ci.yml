@@ -9,7 +9,8 @@ permissions:
 
 jobs:
   # The synced executor tests run the remote shell and Python scripts, so they
-  # need Linux, as on the website's CI.
+  # need Linux, as on the website's CI. The window (package main) is Windows
+  # only and is built in the windows job.
   engine:
     runs-on: ubuntu-latest
     steps:
@@ -20,7 +21,11 @@ jobs:
           go-version: '1.27.1'
 
       - name: Test
-        run: go test -count=1 ./...
+        run: go test -count=1 ./internal/... ./installers/... ./cmd/... ./scripts/...
+
+      # The task runner and the stores are used from several goroutines.
+      - name: Race detector
+        run: go test -count=1 -race ./internal/tasks/... ./internal/servers/... ./internal/store/... ./internal/logx/...
 
       # The synced files must equal the website release recorded in UPSTREAM.json.
       - name: Check synced files
@@ -49,14 +54,50 @@ jobs:
           TEMP: ${{ runner.temp }}
         run: go test -count=1 ./...
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      # Wails builds with -buildvcs=false, so the version carries the tag or
+      # the commit.
+      - name: Build MSBOOST-Local (Wails)
+        shell: pwsh
+        run: |
+          go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0
+          if ($env:GITHUB_REF_TYPE -eq 'tag') {
+            $version = $env:GITHUB_REF_NAME
+            $cfg = Get-Content wails.json -Raw | ConvertFrom-Json
+            $cfg.info.productVersion = $version.TrimStart('v')
+            $cfg | ConvertTo-Json -Depth 10 | Set-Content wails.json -Encoding utf8
+          } else {
+            $version = 'dev-' + $env:GITHUB_SHA.Substring(0, 7)
+          }
+          "VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          wails build -clean -m -platform windows/amd64 -ldflags "-X main.version=$version"
+          if ($LASTEXITCODE -ne 0) { throw 'wails build failed' }
+
+      # The portable package: the program and its licence.
+      - name: Assemble package
+        shell: pwsh
+        run: |
+          $dir = 'build/release'
+          New-Item -ItemType Directory -Force $dir | Out-Null
+          Copy-Item build/bin/MSBOOST-Local.exe $dir/
+          Copy-Item LICENSE "$dir/LICENSE.txt"
+          (Get-ChildItem $dir -File) | ForEach-Object { '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash, $_.Name } | Set-Content "$dir/SHA256SUMS.txt"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MSBOOST-Local-${{ env.VERSION }}-windows-x64
+          path: build/release/
+          if-no-files-found: error
+
       # Command-line tool for testing the engine against a real VPS.
       - name: Build msboost-local-cli
         shell: pwsh
         run: |
-          if ($env:GITHUB_REF_TYPE -eq 'tag') { $version = $env:GITHUB_REF_NAME } else { $version = 'dev-' + $env:GITHUB_SHA.Substring(0, 7) }
-          go build -trimpath -ldflags "-X main.version=$version" -o build/cli/msboost-local-cli.exe ./cmd/msboost-local-cli
+          go build -trimpath -ldflags "-X main.version=$env:VERSION" -o build/cli/msboost-local-cli.exe ./cmd/msboost-local-cli
           if ($LASTEXITCODE -ne 0) { throw 'build failed' }
-          (Get-ChildItem build/cli -File) | ForEach-Object { '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash, $_.Name } | Set-Content build/cli/SHA256SUMS.txt
 
       - uses: actions/upload-artifact@v4
         with:
