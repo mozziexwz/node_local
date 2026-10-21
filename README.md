@@ -2,7 +2,7 @@
 
 在自己的电脑上用 SSH 直接部署和管理 MSBOOST 节点与自备中转。SSH 密码或私钥只在本机内存里使用，不经过网站，也不保存到硬盘。
 
-> **状态：M0（引擎移植）进行中，尚不可用。** 规划见 [docs/MSBOOST本地版开发规划.md](docs/MSBOOST本地版开发规划.md)，M0 实机测试见 [docs/m0/README.md](docs/m0/README.md)。
+> **状态：M1（界面、部署与节点管理）实测中，尚未发布。** 规划见 [docs/MSBOOST本地版开发规划.md](docs/MSBOOST本地版开发规划.md)，各阶段测试说明在 [docs/m0](docs/m0/README.md)、[docs/m1](docs/m1/README.md)。
 
 ## 能做什么
 
@@ -26,22 +26,30 @@ go run ./scripts/syncnode -tag v2.7.0 -source ..\MSBOOST.DE
 ## 目录
 
 ```text
-cmd/msboost-local-cli/   测试用命令行：指纹、部署、取回配置、卸载清理（不随正式版发布）
+main.go, app.go, dto.go  Wails 界面入口与前端绑定（about.go：版本与开源许可）
+frontend/                界面（React + TypeScript + Vite）
+internal/executor/       执行引擎（同步自网站）与 local_*.go 本地补充（进度、升级、状态）
+internal/tasks/          任务运行：每台服务器同时一个任务、进度事件、任务记录
+internal/servers/        服务器列表（local\servers.json，不含密码）
+internal/store/          数据布局、设置、配置文件命名与保存、启动器识别
+internal/logx/           日志（密码打码）
 installers/              内嵌的节点安装脚本与 GOST 固定版本（同步自网站）
-internal/executor/       执行引擎（同步自网站）与 local_*.go 本地补充
+cmd/msboost-local-cli/   测试用命令行：指纹、部署、取回配置、卸载清理（不随正式版发布）
 scripts/syncnode/        从网站仓库同步引擎和脚本
-docs/                    规划与各阶段测试说明
+docs/                    规划、界面样稿与各阶段测试说明
 ```
 
 ## 开发环境
 
-- Windows 10/11 x64，Go 1.27.1
+- Windows 10/11 x64，Go 1.27.1，Node.js 24
 - 引擎的部分测试要运行 bash 和 python3，只在 Linux 上执行（CI）；在 Windows 上会跳过。
 
 ```powershell
 go vet ./...
 go test ./...
 ```
+
+构建界面：安装 Wails CLI v2.16.0（`go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0`），在仓库根目录执行 `wails build`，产物为 `build/bin/MSBOOST-Local.exe`。程序是便携的：`configs\` 和 `local\` 都在 exe 旁边，不需要管理员权限。
 
 ## 许可
 

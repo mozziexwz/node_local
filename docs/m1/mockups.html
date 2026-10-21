@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MSBOOST 本地版 M1 样稿</title>
+<style>
+:root {
+    --bg: #faf9f7; --panel: #fff; --ink: #262626; --sub: #717171; --faint: #a19b94;
+    --line: #eae7e2; --soft: #f5f4f1; --orange: #e76527; --orange-dark: #bb4915; --pale: #fff1e7;
+    --green: #247248; --green-pale: #edf5ef; --red: #ba3b38; --red-pale: #fbeeee;
+    --amber: #8b5a12; --amber-pale: #fdf5e4; --radius: 10px; --shadow: 0 8px 28px rgba(45, 32, 18, .035);
+    color-scheme: light;
+}
+* { box-sizing: border-box; }
+html { background: #e7e3dd; }
+body {
+    margin: 0; padding: 28px 24px 60px; color: var(--ink);
+    font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif; font-size: 13px; line-height: 1.5;
+}
+h1, h2, h3, p { margin: 0; }
+
+/* ---- sheet around the frames ---- */
+.sheet { width: 844px; margin: 0 auto; }
+.sheet > header h1 { font-size: 20px; }
+.sheet > header p { color: #5d5953; margin-top: 6px; }
+.decisions { margin: 14px 0 30px; padding: 12px 16px 12px 34px; background: #fff; border-radius: 10px; border: 1px solid #ddd6cd; line-height: 1.75; }
+.frame-title { font-size: 15px; font-weight: 700; margin: 0 0 4px; }
+.frame-note { color: #5d5953; margin: 0 0 10px; line-height: 1.7; }
+.frame-note b { color: var(--ink); }
+
+/* ---- the window: 860×560 outer, 844×521 client ---- */
+.window { width: 844px; margin-bottom: 40px; border: 1px solid #c9c2b9; border-radius: 8px; overflow: hidden; box-shadow: 0 14px 40px rgba(40, 28, 16, .18); background: var(--bg); }
+.titlebar { height: 31px; display: flex; align-items: center; justify-content: space-between; background: #fff; border-bottom: 1px solid var(--line); font-size: 12px; user-select: none; }
+.titlebar .name { display: flex; align-items: center; gap: 8px; padding-left: 10px; }
+.titlebar .wbtns { display: flex; height: 100%; }
+.titlebar .wbtns span { width: 46px; display: flex; align-items: center; justify-content: center; color: #444; }
+.client { height: 521px; position: relative; display: flex; flex-direction: column; }
+
+/* ---- launcher base styles ---- */
+button { font: inherit; color: inherit; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 5px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-size: 12.5px; line-height: 1.4; white-space: nowrap; cursor: pointer; }
+button.primary { background: var(--orange); border-color: var(--orange); color: #fff; }
+button.danger { color: var(--red); border-color: #edcccc; }
+button.danger-text { color: var(--red); border-color: transparent; background: transparent; }
+button.small { padding: 2px 10px; border-radius: 7px; font-size: 11.5px; }
+button.link { padding: 0 2px; border: 0; background: transparent; color: var(--orange-dark); font-size: inherit; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+input, select { font: inherit; color: var(--ink); font-size: 12.5px; background: #fff; border: 1px solid #ddd9d3; border-radius: 7px; padding: 4px 9px; min-height: 30px; }
+input:disabled { background: var(--soft); color: var(--sub); }
+.muted { color: var(--sub); }
+.small { font-size: 12px; }
+.hint { color: var(--faint); font-size: 11.5px; }
+.ok { color: var(--green); }
+.bad { color: var(--red); }
+.mono { font-family: Consolas, "Cascadia Mono", "Microsoft YaHei UI", monospace; font-size: 12px; }
+.spinner { width: 13px; height: 13px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.switch { display: inline-flex; flex-shrink: 0; }
+.switch .track { width: 32px; height: 19px; border-radius: 19px; background: #d6d3cf; padding: 3px; }
+.switch .thumb { display: block; width: 13px; height: 13px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); }
+.switch.on .track { background: var(--orange); }
+.switch.on .thumb { transform: translateX(13px); }
+
+.shell { display: flex; flex-direction: column; height: 100%; }
+.tabs { display: flex; align-items: stretch; gap: 2px; height: 34px; flex-shrink: 0; padding: 0 10px; background: var(--panel); border-bottom: 1px solid var(--line); }
+.tab { padding: 0 11px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: #646260; font-size: 12.5px; }
+.tab.active { border-bottom-color: var(--orange); color: var(--orange-dark); font-weight: 600; }
+.tab-icon { width: 14px; height: 14px; }
+.tabs-right { margin-left: auto; display: flex; align-items: center; gap: 8px; color: var(--faint); font-size: 11px; }
+.tabs-right .home-link { font-size: 11px; font-weight: 700; letter-spacing: .5px; }
+.content { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; overflow: hidden; padding: 10px 12px; }
+.statusbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 26px; flex-shrink: 0; padding: 0 12px; background: var(--panel); border-top: 1px solid var(--line); color: var(--sub); font-size: 11.5px; white-space: nowrap; }
+.status-left { display: flex; align-items: center; gap: 6px; }
+.statusbar b { color: var(--ink); font-weight: 600; }
+
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.card.fill { flex: 1; min-height: 0; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.card-head h2 { font-size: 13px; font-weight: 650; display: flex; align-items: center; gap: 8px; }
+.card-actions { display: flex; align-items: center; gap: 8px; }
+.banner { display: flex; align-items: flex-start; gap: 12px; padding: 6px 10px; border: 1px solid; border-radius: 8px; font-size: 12px; line-height: 1.6; }
+.banner.error { background: #fff5f4; border-color: #e9cecc; color: var(--red); }
+.banner.warn { background: var(--amber-pale); border-color: #f0dcb4; color: var(--amber); }
+.banner.info { background: #f3f8f4; border-color: #d5e5d7; color: var(--green); }
+.notice { padding: 7px 10px; border-radius: 8px; background: var(--soft); color: #5d5953; font-size: 12px; line-height: 1.7; }
+dl.facts { display: grid; grid-template-columns: max-content 1fr; gap: 7px 18px; margin: 0; }
+dl.facts dt { color: var(--sub); }
+dl.facts dd { margin: 0; }
+.row-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.segmented { display: inline-flex; padding: 3px; border-radius: 9px; background: var(--soft); }
+.segmented button { padding: 3px 12px; border: 0; border-radius: 7px; background: transparent; color: var(--sub); }
+.segmented button.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+
+table.list { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+table.list th { text-align: left; font-weight: 500; color: var(--sub); padding: 5px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.list td { padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+table.list tr:last-child td { border-bottom: 0; }
+table.list tr.sel td { background: #fffaf6; }
+table.list td.actions { text-align: right; }
+table.list td.actions button + button { margin-left: 4px; }
+
+.modal-backdrop { position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 12px; background: rgba(29, 24, 20, .36); }
+.modal { width: 440px; max-width: 100%; max-height: 100%; display: flex; flex-direction: column; background: #fff; border-radius: 12px; padding: 14px 16px 12px; box-shadow: 0 30px 100px rgba(0,0,0,.2); }
+.modal h3 { font-size: 14px; margin-bottom: 10px; }
+.modal-body { color: #4a4743; line-height: 1.65; display: flex; flex-direction: column; gap: 10px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.modal-actions button.danger { background: var(--red); border-color: var(--red); color: #fff; }
+.modal-actions .left { margin-right: auto; }
+
+/* ---- local edition additions ---- */
+.split { flex: 1; min-height: 0; display: grid; grid-template-columns: 232px minmax(0, 1fr); gap: 8px; }
+.split > .col { display: flex; flex-direction: column; gap: 8px; min-height: 0; }
+.server-list { list-style: none; margin: 0 -6px; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.server-list li { padding: 6px 8px; border-radius: 8px; display: flex; flex-direction: column; gap: 1px; }
+.server-list li.sel { background: var(--pale); }
+.server-list .top { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.server-list .name { font-weight: 600; }
+.server-list .addr { color: var(--sub); font-size: 12px; font-variant-numeric: tabular-nums; }
+.tag { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 0 6px; border-radius: 5px; background: var(--soft); color: var(--sub); white-space: nowrap; }
+.tag.ok { background: var(--green-pale); color: var(--green); }
+.tag.busy { background: var(--pale); color: var(--orange-dark); }
+.tag.warn { background: var(--amber-pale); color: var(--amber); }
+.tag .spinner { width: 9px; height: 9px; border-width: 1.5px; }
+.list-foot { margin-top: auto; color: var(--faint); font-size: 11.5px; }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; display: inline-block; margin-right: 5px; vertical-align: 1px; }
+.fp { font-family: Consolas, "Cascadia Mono", monospace; font-size: 12px; overflow-wrap: anywhere; }
+.explain { display: grid; grid-template-columns: max-content 1fr; gap: 2px 10px; color: var(--sub); font-size: 12px; }
+.explain b { color: #4a4743; font-weight: 600; }
+
+.steps { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-template-rows: repeat(5, auto); grid-template-columns: 1fr 1fr; gap: 5px 16px; }
+.steps li { display: flex; align-items: center; gap: 8px; color: var(--faint); }
+.steps li.done { color: var(--ink); }
+.steps li.now { color: var(--orange-dark); font-weight: 600; }
+.steps .ic { width: 15px; height: 15px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; }
+.steps .ic.todo { border: 1.5px solid #d6d1ca; border-radius: 50%; }
+.steps .ic.check { background: var(--green); border-radius: 50%; }
+.progress { height: 6px; border-radius: 3px; background: var(--soft); overflow: hidden; }
+.progress > span { display: block; height: 100%; width: 45%; background: var(--orange); }
+
+dl.check { display: grid; grid-template-columns: max-content 1fr; gap: 6px 16px; margin: 0; }
+dl.check dt { color: var(--sub); }
+dl.check dd { margin: 0; font-weight: 600; }
+dl.check dd .muted { font-weight: 400; }
+
+.form-grid { display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 8px 12px; align-items: center; }
+.form-grid > label { color: var(--sub); }
+.form-grid .with { display: flex; align-items: center; gap: 8px; }
+.fp-box { border: 1px solid #f0dcb4; background: var(--amber-pale); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 4px; }
+.fp-box .label { color: var(--amber); font-size: 12px; font-weight: 600; }
+.pw { position: relative; }
+.pw input { width: 100%; padding-right: 54px; letter-spacing: 2px; }
+.pw button { position: absolute; right: 4px; top: 3px; padding: 2px 8px; font-size: 11.5px; border-color: transparent; color: var(--orange-dark); }
+.paths { margin: 0; padding: 6px 10px; border: 1px solid var(--line); border-radius: 8px; background: #fcfbfa; list-style: none; font-family: Consolas, "Cascadia Mono", "Microsoft YaHei UI", monospace; font-size: 11.5px; line-height: 1.7; }
+.paths .k { color: var(--faint); display: inline-block; width: 34px; }
+.relay-form { display: grid; grid-template-columns: 72px minmax(0, 1fr) 72px minmax(0, 1fr); gap: 8px 12px; align-items: center; }
+.relay-form > label { color: var(--sub); }
+.relay-form select, .relay-form input { width: 100%; }
+.relay-form .rate { display: flex; align-items: center; gap: 6px; }
+.relay-form .rate input { width: 64px; }
+.friend-top { display: flex; align-items: center; gap: 12px; }
+.flow { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.flow li { display: flex; align-items: center; gap: 6px; padding: 5px 8px; border-radius: 8px; background: var(--soft); color: var(--sub); font-size: 12px; white-space: nowrap; }
+.flow li b { width: 18px; height: 18px; border-radius: 50%; background: #cfc9c1; color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; flex-shrink: 0; }
+.flow li.mine { background: var(--pale); color: var(--orange-dark); font-weight: 600; }
+.flow li.mine b { background: var(--orange); }
+.num { width: 18px; height: 18px; border-radius: 50%; background: var(--orange); color: #fff; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+.form-grid.wide { grid-template-columns: 84px minmax(0, 1fr); }
+.form-grid .grow { flex: 1; min-width: 0; }
+.share-out { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 5px 6px 5px 10px; border: 1px dashed #e3b99f; border-radius: 8px; background: #fffaf6; }
+.checks { display: flex; gap: 16px; font-size: 12px; }
+.nowrap { white-space: nowrap; }
+body.solo { padding: 10px 24px; }
+body.solo header, body.solo .decisions, body.solo .frame { display: none; }
+body.solo .frame:target { display: block; }
+body.solo .window { margin-bottom: 0; }
+</style>
+</head>
+<body>
+<script>if (location.hash) document.body.classList.add("solo")</script>
+<div class="sheet">
+
+<header>
+    <h1>MSBOOST 本地版 · M1 界面样稿</h1>
+    <p>2026-10-22，第 2 版：新增朋友转发（第 7、8 屏）。示例里的 IP 都是文档专用地址，指纹是编的。样式直接沿用启动器 v1.1.0 的配色、字体、顶部标签和底部状态栏。</p>
+</header>
+
+<ol class="decisions">
+    <li><b>窗口</b>：860×560（内容区 844×521），固定大小，和启动器一样不能拉伸。启动器的 776×337 放不下服务器列表和安装进度。</li>
+    <li><b>标签从规划里的 6 个改成 5 个</b>：服务器 / 中转 / 朋友转发 / 任务记录 / 设置与关于。部署、升级、取回配置、卸载都放在「服务器」页，作为对选中服务器的操作，不用在每个页面重新选服务器。</li>
+    <li><b>安装进度显示中文步骤</b>：一部分来自本程序自己的阶段（连接、检查系统、开启 BBR、保存配置），其余取自安装脚本的进度行，翻译后显示。脚本原文是英文，里面有组件名，还会打印带节点密码的配置，所以不显示。</li>
+    <li><b>密码每次操作时输入</b>：添加服务器时只读取并保存指纹，不填密码。</li>
+    <li><b>朋友转发（新增）</b>：有中转服务器的一方只要朋友节点的「IP:端口」就能建转发。双方用两段能看懂的文字交换信息（转发请求、中转入口），都不交出 SSH 或节点密码。见第 7、8 屏。</li>
+</ol>
+
+<!-- 1 ============================================================ -->
+<section class="frame" id="f1">
+<h2 class="frame-title">1. 服务器（首页）</h2>
+<p class="frame-note">左边是保存的服务器，右边是选中服务器的详情和操作。只保存地址、登录方式、私钥文件位置和指纹。<b>升级</b>：换新版安装脚本，用户名、密码、端口不变，原配置继续能用。<b>重新部署</b>：生成新配置，旧配置立即失效，所以多一步确认。「移除」只是从列表里删掉，不动服务器。</p>
+<div class="window">
+    <div class="titlebar"><span class="name"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#e76527" d="M12 2l2.2 4.6 4.6-1.4-1.4 4.6L22 12l-4.6 2.2 1.4 4.6-4.6-1.4L12 22l-2.2-4.6-4.6 1.4 1.4-4.6L2 12l4.6-2.2-1.4-4.6 4.6 1.4z"/></svg>MSBOOST 本地版</span><span class="wbtns"><span>—</span><span>✕</span></span></div>
+    <div class="client"><div class="shell">
+        <nav class="tabs">
+            <button class="tab active"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>服务器</button>
+            <button class="tab">中转</button>
+            <button class="tab">朋友转发</button>
+            <button class="tab">任务记录</button>
+            <button class="tab">设置与关于</button>
+            <div class="tabs-right"><span>v1.0.0</span><button class="link home-link">MSBOOST</button></div>
+        </nav>
+        <main class="content">
+            <div class="split">
+                <div class="col">
+                    <section class="card fill">
+                        <div class="card-head"><h2>服务器</h2><button class="small primary">添加</button></div>
+                        <ul class="server-list">
+                            <li class="sel"><div class="top"><span class="name">东京节点</span><span class="tag ok"><span class="dot"></span>节点运行中</span></div><span class="addr">203.0.113.10</span></li>
+                            <li><div class="top"><span class="name">洛杉矶中转</span><span class="tag">中转 3 条</span></div><span class="addr">198.51.100.20</span></li>
+                            <li><div class="top"><span class="name">新加坡</span><span class="tag">未部署</span></div><span class="addr">192.0.2.30</span></li>
+                        </ul>
+                        <p class="list-foot">只保存地址和指纹，不保存密码。</p>
+                    </section>
+                </div>
+                <div class="col">
+                    <section class="card">
+                        <div class="card-head"><h2>东京节点</h2><div class="card-actions"><button class="small">编辑</button><button class="small danger-text">移除</button></div></div>
+                        <dl class="facts">
+                            <dt>地址</dt><dd>203.0.113.10:22<span class="muted">（root，密码登录）</span></dd>
+                            <dt>主机指纹</dt><dd><span class="fp">SHA256:Kd3pQ9vX2mT8nL4rY7cB1fH6jW0sE5uA3zG9kP2qV6o</span> <span class="hint">ECDSA · 10-22 首次信任</span></dd>
+                            <dt>节点</dt><dd><span class="ok"><span class="dot"></span>运行中</span><span class="muted"> · BBR 已开启 · 本机到节点端口可达 · 10:21 检查</span></dd>
+                            <dt>配置文件</dt><dd>东京节点.json <span class="hint">启动器在同一文件夹，可直接使用</span></dd>
+                        </dl>
+                        <div class="row-actions">
+                            <button>刷新状态</button>
+                            <button>取回配置</button>
+                            <button>升级节点</button>
+                            <button>重新部署…</button>
+                            <button class="danger-text" style="margin-left:auto">卸载…</button>
+                        </div>
+                        <div class="explain">
+                            <b>升级节点</b><span>换新版安装脚本，用户名、密码、端口不变，原配置继续能用。</span>
+                            <b>重新部署</b><span>生成新配置，旧配置立即失效。</span>
+                            <b>取回配置</b><span>从节点读回当前配置，不改动服务器；部署时断线没拿到配置就用它。</span>
+                        </div>
+                    </section>
+                    <section class="card">
+                        <div class="card-head"><h2>这台服务器上的中转</h2><button class="small">在「中转」页管理</button></div>
+                        <p class="muted small">没有中转。</p>
+                    </section>
+                </div>
+            </div>
+        </main>
+        <footer class="statusbar"><div class="status-left">就绪</div><div>configs 里 3 个配置 · 启动器在同一文件夹</div></footer>
+    </div></div>
+</div>
+</section>
+
+<!-- 2 ============================================================ -->
+<section class="frame" id="f2">
+<h2 class="frame-title">2. 添加服务器</h2>
+<p class="frame-note">填好地址后点「读取指纹」，程序只握手、不登录。<b>信任并保存</b>后指纹就固定下来，以后指纹变化会拒绝连接，要你核实后才能替换。选「私钥文件」时多一行选择文件，只记文件位置；私钥有口令的话，每次操作时再问。</p>
+<div class="window">
+    <div class="titlebar"><span class="name"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#e76527" d="M12 2l2.2 4.6 4.6-1.4-1.4 4.6L22 12l-4.6 2.2 1.4 4.6-4.6-1.4L12 22l-2.2-4.6-4.6 1.4 1.4-4.6L2 12l4.6-2.2-1.4-4.6 4.6 1.4z"/></svg>MSBOOST 本地版</span><span class="wbtns"><span>—</span><span>✕</span></span></div>
+    <div class="client"><div class="shell">
+        <nav class="tabs">
+            <button class="tab active"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>服务器</button>
+            <button class="tab">中转</button><button class="tab">朋友转发</button><button class="tab">任务记录</button><button class="tab">设置与关于</button>
+            <div class="tabs-right"><span>v1.0.0</span><button class="link home-link">MSBOOST</button></div>
+        </nav>
+        <main class="content">
+            <div class="split">
+                <div class="col"><section class="card fill"><div class="card-head"><h2>服务器</h2><button class="small primary">添加</button></div>
+                    <ul class="server-list"><li class="sel"><div class="top"><span class="name">东京节点</span><span class="tag ok"><span class="dot"></span>节点运行中</span></div><span class="addr">203.0.113.10</span></li><li><div class="top"><span class="name">洛杉矶中转</span><span class="tag">中转 3 条</span></div><span class="addr">198.51.100.20</span></li></ul></section></div>
+                <div class="col"><section class="card fill"></section></div>
+            </div>
+        </main>
+        <footer class="statusbar"><div class="status-left">就绪</div><div>configs 里 3 个配置 · 启动器在同一文件夹</div></footer>
+    </div>
+    <div class="modal-backdrop"><div class="modal">
+        <h3>添加服务器</h3>
+        <div class="modal-body">
+            <div class="form-grid">
+                <label>服务器 IP</label><input value="192.0.2.30">
+                <label>SSH 端口</label><div class="with"><input value="22" style="width:80px"><span class="hint">登录用户固定为 root</span></div>
+                <label>备注</label><input value="新加坡" placeholder="可不填">
+                <label>登录方式</label><div class="with"><span class="segmented"><button class="on">密码</button><button>私钥文件</button></span><span class="hint">密码不在这里填</span></div>
+            </div>
+            <div class="fp-box">
+                <span class="label">服务器指纹（ECDSA）</span>
+                <span class="fp">SHA256:pW7rT2nQ8vB4xK1mZ6cL9fH3jD0sA5uE8yG2kR7qN4i</span>
+                <span class="small" style="color:var(--amber)">首次连接无法排除中间人攻击。服务商控制台能看到 SSH 指纹的话，先核对一致。</span>
+            </div>
+        </div>
+        <div class="modal-actions"><button class="left">重新读取</button><button>取消</button><button class="primary">信任并保存</button></div>
+    </div></div>
+    </div>
+</div>
+</section>
+
+<!-- 3 ============================================================ -->
+<section class="frame" id="f3">
+<h2 class="frame-title">3. 开始操作前输入密码</h2>
+<p class="frame-note">每个要登录的操作（部署、升级、取回配置、刷新状态、卸载、建中转、中转管理）都先弹这个框，密码只在这一次操作里用。<b>重新部署</b>时多一条黄色提醒。用私钥登录且私钥没有口令时，这一步直接跳过。</p>
+<div class="window">
+    <div class="titlebar"><span class="name"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#e76527" d="M12 2l2.2 4.6 4.6-1.4-1.4 4.6L22 12l-4.6 2.2 1.4 4.6-4.6-1.4L12 22l-2.2-4.6-4.6 1.4 1.4-4.6L2 12l4.6-2.2-1.4-4.6 4.6 1.4z"/></svg>MSBOOST 本地版</span><span class="wbtns"><span>—</span><span>✕</span></span></div>
+    <div class="client"><div class="shell">
+        <nav class="tabs">
+            <button class="tab active"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>服务器</button>
+            <button class="tab">中转</button><button class="tab">朋友转发</button><button class="tab">任务记录</button><button class="tab">设置与关于</button>
+            <div class="tabs-right"><span>v1.0.0</span><button class="link home-link">MSBOOST</button></div>
+        </nav>
+        <main class="content">
+            <div class="split">
+                <div class="col"><section class="card fill"><div class="card-head"><h2>服务器</h2><button class="small primary">添加</button></div>
+                    <ul class="server-list"><li class="sel"><div class="top"><span class="name">东京节点</span><span class="tag ok"><span class="dot"></span>节点运行中</span></div><span class="addr">203.0.113.10</span></li><li><div class="top"><span class="name">洛杉矶中转</span><span class="tag">中转 3 条</span></div><span class="addr">198.51.100.20</span></li></ul></section></div>
+                <div class="col"><section class="card fill"></section></div>
+            </div>
+        </main>
+        <footer class="statusbar"><div class="status-left">就绪</div><div>configs 里 3 个配置 · 启动器在同一文件夹</div></footer>
+    </div>
+    <div class="modal-backdrop"><div class="modal" style="width:400px">
+        <h3>重新部署：输入 root 密码</h3>
+        <div class="modal-body">
+            <p>连接 <b>东京节点</b>（203.0.113.10:22），主机指纹已核对。</p>
+            <div class="pw"><input type="password" value="password123"><button>显示</button></div>
+            <div class="banner warn">这台服务器上已经有节点。重新部署会生成新配置，东京节点.json 等旧配置会立即失效。</div>
+            <p class="hint">密码只用于这一次操作，结束后从内存清除，不写入硬盘，也不进日志。</p>
+        </div>
+        <div class="modal-actions"><button>取消</button><button class="primary">开始部署</button></div>
+    </div></div>
+    </div>
+</div>
+</section>
+
+<!-- 4 ============================================================ -->
+<section class="frame" id="f4">
+<h2 class="frame-title">4. 部署进行中</h2>
+<p class="frame-note">步骤一部分来自本程序自己的阶段，其余取自安装脚本的进度行，翻译成中文。有任务在跑时，这台服务器上的其他操作都会锁住；其他服务器照常可以操作。<b>取消</b>只断开本机连接，服务器上的安装会继续跑完，之后用「取回配置」拿结果。这时关窗口也会先提醒。</p>
+<div class="window">
+    <div class="titlebar"><span class="name"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#e76527" d="M12 2l2.2 4.6 4.6-1.4-1.4 4.6L22 12l-4.6 2.2 1.4 4.6-4.6-1.4L12 22l-2.2-4.6-4.6 1.4 1.4-4.6L2 12l4.6-2.2-1.4-4.6 4.6 1.4z"/></svg>MSBOOST 本地版</span><span class="wbtns"><span>—</span><span>✕</span></span></div>
+    <div class="client"><div class="shell">
+        <nav class="tabs">
+            <button class="tab active"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>服务器</button>
+            <button class="tab">中转</button><button class="tab">朋友转发</button><button class="tab">任务记录</button><button class="tab">设置与关于</button>
+            <div class="tabs-right"><span>v1.0.0</span><button class="link home-link">MSBOOST</button></div>
+        </nav>
+        <main class="content">
+            <div class="split">
+                <div class="col">
+                    <section class="card fill">
+                        <div class="card-head"><h2>服务器</h2><button class="small primary">添加</button></div>
+                        <ul class="server-list">
+                            <li><div class="top"><span class="name">东京节点</span><span class="tag ok"><span class="dot"></span>节点运行中</span></div><span class="addr">203.0.113.10</span></li>
+                            <li><div class="top"><span class="name">洛杉矶中转</span><span class="tag">中转 3 条</span></div><span class="addr">198.51.100.20</span></li>
+                            <li class="sel"><div class="top"><span class="name">新加坡</span><span class="tag busy"><span class="spinner"></span>部署中</span></div><span class="addr">192.0.2.30</span></li>
+                        </ul>
+                        <p class="list-foot">只保存地址和指纹，不保存密码。</p>
+                    </section>
+                </div>
+                <div class="col">
+                    <section class="card fill">
+                        <div class="card-head"><h2>正在部署 · 新加坡</h2><span class="muted small">已用 1 分 12 秒，通常 2–5 分钟</span></div>
+                        <div class="progress"><span></span></div>
+                        <ul class="steps">
+                            <li class="done"><span class="ic check"><svg width="9" height="9" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5" stroke="#fff" stroke-width="2" fill="none"/></svg></span>连接服务器，指纹一致</li>
+                            <li class="done"><span class="ic check"><svg width="9" height="9" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5" stroke="#fff" stroke-width="2" fill="none"/></svg></span>检查系统：Debian 12</li>
+                            <li class="done"><span class="ic check"><svg width="9" height="9" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5" stroke="#fff" stroke-width="2" fill="none"/></svg></span>开启 BBR</li>
+                            <li class="done"><span class="ic check"><svg width="9" height="9" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5" stroke="#fff" stroke-width="2" fill="none"/></svg></span>安装依赖软件</li>
+                            <li class="done"><span class="ic check"><svg width="9" height="9" viewBox="0 0 12 12"><path d="M2 6.5l2.5 2.5L10 3.5" stroke="#fff" stroke-width="2" fill="none"/></svg></span>同步系统时间</li>
+                            <li class="now"><span class="ic"><span class="spinner"></span></span>下载并校验 MSBOOST 引擎</li>
+                            <li><span class="ic todo"></span>下载分流规则</li>
+                            <li><span class="ic todo"></span>检查配置并安装服务</li>
+                            <li><span class="ic todo"></span>本机自测</li>
+                            <li><span class="ic todo"></span>保存配置文件</li>
+                        </ul>
+                        <div class="notice" style="margin-top:auto">取消只会断开这台电脑的连接。服务器上的安装会继续跑完，之后可以用「取回配置」拿到结果。</div>
+                        <div class="row-actions"><button class="danger-text" style="margin-left:auto">取消</button></div>
+                    </section>
+                </div>
+            </div>
+        </main>
+        <footer class="statusbar"><div class="status-left"><span class="spinner" style="width:10px;height:10px;color:var(--orange)"></span>正在部署 <b>新加坡</b> · 已用 1:12</div><div>configs 里 3 个配置 · 启动器在同一文件夹</div></footer>
+    </div></div>
+</div>
+</section>
+
+<!-- 5 ============================================================ -->
+<section class="frame" id="f5">
+<h2 class="frame-title">5. 部署完成</h2>
+<p class="frame-note">配置自动存进 exe 旁的 configs 文件夹。启动器在同一文件夹时会直接提示「可以用了」；不在一起时，按钮换成「导入到启动器…」（第一次选启动器位置，之后记住）。「本机到节点端口」是从你的电脑测的，比网站从执行机测更能反映国内的情况。</p>
+<div class="window">
+    <div class="titlebar"><span class="name"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#e76527" d="M12 2l2.2 4.6 4.6-1.4-1.4 4.6L22 12l-4.6 2.2 1.4 4.6-4.6-1.4L12 22l-2.2-4.6-4.6 1.4 1.4-4.6L2 12l4.6-2.2-1.4-4.6 4.6 1.4z"/></svg>MSBOOST 本地版</span><span class="wbtns"><span>—</span><span>✕</span></span></div>
+    <div class="client"><div class="shell">
+        <nav class="tabs">
+            <button class="tab active"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>服务器</button>
+            <button class="tab">中转</button><button class="tab">朋友转发</button><button class="tab">任务记录</button><button class="tab">设置与关于</button>
+            <div class="tabs-right"><span>v1.0.0</span><button class="link home-link">MSBOOST</button></div>
+        </nav>
+        <main class="content">
+            <div class="split">
+                <div class="col">
+                    <section class="card fill">
+                        <div class="card-head"><h2>服务器</h2><button class="small primary">添加</button></div>
+                        <ul class="server-list">
+                            <li><div class="top"><span class="name">东京节点</span><span class="tag ok"><span class="dot"></span>节点运行中</span></div><span class="addr">203.0.113.10</span></li>
+                            <li><div class="top"><span class="name">洛杉矶中转</span><span class="tag">中转 3 条</span></div><span class="addr">198.51.100.20</span></li>
+                            <li class="sel"><div class="top"><span class="name">新加坡</span><span class="tag ok"><span class="dot"></span>节点运行中</span></div><span class="addr">192.0.2.30</span></li>
+                        </ul>
+                        <p class="list-foot">只保存地址和指纹，不保存密码。</p>
+                    </section>
+                </div>
+                <div class="col">
+                    <section class="card fill">
+                        <div class="card-head"><h2>部署完成 · 新加坡</h2><span class="muted small">用时 2 分 31 秒</span></div>
+                        <div class="banner info">配置已保存为 configs\新加坡.json。启动器在同一文件夹，打开启动器的「节点配置」就能看到。</div>
+                        <dl class="check">
+                            <dt>节点服务</dt><dd class="ok">运行中</dd>
+                            <dt>本机自测</dt><dd class="ok">通过</dd>
+                            <dt>本机到节点端口</dt><dd class="ok">可达 <span class="muted">（TCP 34917）</span></dd>
+                            <dt>BBR</dt><dd>已开启</dd>
+                            <dt>游戏连接</dt><dd><span class="muted">还没测：在启动器选中这份配置，看「网络检测」</span></dd>
+                        </dl>
+                        <div class="row-actions" style="margin-top:auto">
+                            <button>打开配置文件夹</button>
+                            <button>打开启动器</button>
+                            <button class="primary" style="margin-left:auto">完成</button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+        <footer class="statusbar"><div class="status-left">部署完成：<b>新加坡</b></div><div>configs 里 4 个配置 · 启动器在同一文件夹</div></footer>
+    </div></div>
+</div>
+</section>
+
+<!-- 6 ============================================================ -->
+<section class="frame" id="f6">
+<h2 class="frame-title">6. 中转</h2>
+<p class="frame-note">上面新建中转，下面管理所选中转服务器上的转发，列表来自服务器本身。网站建的中转也会列出来，能一样暂停、限速和删除。带宽 1–10 Mbps，和网站一样。新建完成后生成一份新配置（默认用备注命名），入口是中转服务器。<b>前置机</b>是可选的第二台服务器：玩家先连前置机，再到中转。给朋友建的转发也在列表里，多一个「复制入口」按钮，方便再发给朋友。</p>
+<div class="window">
+    <div class="titlebar"><span class="name"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#e76527" d="M12 2l2.2 4.6 4.6-1.4-1.4 4.6L22 12l-4.6 2.2 1.4 4.6-4.6-1.4L12 22l-2.2-4.6-4.6 1.4 1.4-4.6L2 12l4.6-2.2-1.4-4.6 4.6 1.4z"/></svg>MSBOOST 本地版</span><span class="wbtns"><span>—</span><span>✕</span></span></div>
+    <div class="client"><div class="shell">
+        <nav class="tabs">
+            <button class="tab"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>服务器</button>
+            <button class="tab active">中转</button><button class="tab">朋友转发</button><button class="tab">任务记录</button><button class="tab">设置与关于</button>
+            <div class="tabs-right"><span>v1.0.0</span><button class="link home-link">MSBOOST</button></div>
+        </nav>
+        <main class="content">
+            <section class="card">
+                <div class="card-head"><h2>新建自备中转</h2><button class="primary">创建中转</button></div>
+                <div class="relay-form">
+                    <label>中转服务器</label><select><option>洛杉矶中转（198.51.100.20）</option></select>
+                    <label>转发到</label><select><option>东京节点.json（203.0.113.10）</option></select>
+                    <label>前置机</label><select><option>不使用</option></select>
+                    <label>备注</label><input value="自备中转">
+                    <label>带宽</label><div class="rate"><input value="5"><span class="muted">Mbps，上下行各，1–10</span></div>
+                    <span></span><span class="hint">转发到自己的节点，完成后生成 自备中转.json。帮朋友转发请用「朋友转发」页</span>
+                </div>
+            </section>
+            <section class="card fill">
+                <div class="card-head"><h2>洛杉矶中转 上的转发（3）</h2><div class="card-actions"><select style="width:auto"><option>洛杉矶中转</option></select><button class="small">刷新</button></div></div>
+                <table class="list">
+                    <thead><tr><th>入口端口</th><th>转发到</th><th>带宽</th><th>状态</th><th>连接</th><th>来源</th><th></th></tr></thead>
+                    <tbody>
+                        <tr><td>41203</td><td>203.0.113.10:34917</td><td>5 Mbps</td><td><span class="ok"><span class="dot"></span>运行中</span></td><td>2</td><td>自备中转</td><td class="actions"><button class="small">暂停</button><button class="small">限速</button><button class="small danger-text">删除</button></td></tr>
+                        <tr><td>41877</td><td>192.0.2.77:30512</td><td>5 Mbps</td><td><span class="ok"><span class="dot"></span>运行中</span></td><td>1</td><td>朋友转发 · 小明</td><td class="actions"><button class="small">复制入口</button><button class="small">暂停</button><button class="small">限速</button><button class="small danger-text">删除</button></td></tr>
+                        <tr><td>52880</td><td>192.0.2.30:28811</td><td>10 Mbps</td><td class="muted">已暂停</td><td>0</td><td>网站 · a***@qq.com</td><td class="actions"><button class="small">恢复</button><button class="small">限速</button><button class="small danger-text">删除</button></td></tr>
+                    </tbody>
+                </table>
+                <p class="hint">读取和操作都要输入这台中转服务器的密码。删除只删本工具或网站建的转发，不动其他软件。</p>
+            </section>
+        </main>
+        <footer class="statusbar"><div class="status-left">就绪</div><div>configs 里 4 个配置 · 启动器在同一文件夹</div></footer>
+    </div></div>
+</div>
+</section>
+
+<!-- 7 ============================================================ -->
+<section class="frame" id="f7">
+<h2 class="frame-title">7. 朋友转发 · 我帮朋友转发（有中转服务器的一方）</h2>
+<p class="frame-note">只需要朋友节点的 IP 和端口，不需要朋友的配置文件或任何密码。粘贴框能认出朋友发来的整段文字，也可以只填「IP:端口」。<b>建转发前</b>会先从中转服务器连一下朋友的节点端口，连不上就不建。建好后把下面那段文字发给朋友；这条转发和自备中转一样，在「中转」页暂停、限速或删除。</p>
+<div class="window">
+    <div class="titlebar"><span class="name"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#e76527" d="M12 2l2.2 4.6 4.6-1.4-1.4 4.6L22 12l-4.6 2.2 1.4 4.6-4.6-1.4L12 22l-2.2-4.6-4.6 1.4 1.4-4.6L2 12l4.6-2.2-1.4-4.6 4.6 1.4z"/></svg>MSBOOST 本地版</span><span class="wbtns"><span>—</span><span>✕</span></span></div>
+    <div class="client"><div class="shell">
+        <nav class="tabs">
+            <button class="tab"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>服务器</button>
+            <button class="tab">中转</button><button class="tab active">朋友转发</button><button class="tab">任务记录</button><button class="tab">设置与关于</button>
+            <div class="tabs-right"><span>v1.0.0</span><button class="link home-link">MSBOOST</button></div>
+        </nav>
+        <main class="content">
+            <div class="friend-top">
+                <span class="segmented"><button class="on">我帮朋友转发</button><button>我用朋友的中转</button></span>
+                <span class="hint">双方只交换 IP 和端口，都不用交出 SSH 或节点密码</span>
+            </div>
+            <ol class="flow">
+                <li><b>1</b>朋友复制节点地址发给你</li>
+                <li class="mine"><b>2</b>你在中转服务器上建转发</li>
+                <li class="mine"><b>3</b>你把中转入口发回给朋友</li>
+                <li><b>4</b>朋友用入口生成新配置</li>
+            </ol>
+            <section class="card">
+                <div class="card-head"><h2><span class="num">2</span>建转发</h2><span class="hint">建之前先从中转服务器连一下朋友的节点端口</span></div>
+                <div class="form-grid wide">
+                    <label>朋友发来的</label><div class="with"><input class="grow" value="MSBOOST 转发请求 192.0.2.77:30512"><span class="ok small nowrap">✓ 目标 192.0.2.77:30512</span></div>
+                    <label>中转服务器</label><select><option>洛杉矶中转（198.51.100.20）</option></select>
+                    <label>备注</label><div class="with"><input value="小明" style="width:150px"><span class="muted">带宽</span><input value="5" style="width:52px"><span class="muted">Mbps（1–10）</span><button class="primary" style="margin-left:auto">创建转发</button></div>
+                </div>
+            </section>
+            <section class="card">
+                <div class="card-head"><h2><span class="num">3</span>发给朋友</h2><span class="ok small">转发已建好，用时 41 秒</span></div>
+                <div class="share-out"><span class="mono">MSBOOST 中转入口 198.51.100.20:41877 → 192.0.2.77:30512</span><button class="small primary">复制</button></div>
+                <p class="hint">朋友在本地版「我用朋友的中转」里粘贴这段文字就行。删除这条转发后朋友会连不上，删之前记得告诉他。</p>
+            </section>
+            <div class="notice">只帮信任的朋友转发：朋友的游戏流量会经过你的服务器，占用你的带宽。转发只能指向公网地址，并且自带明文代理筛查。</div>
+        </main>
+        <footer class="statusbar"><div class="status-left">就绪</div><div>configs 里 4 个配置 · 启动器在同一文件夹</div></footer>
+    </div></div>
+</div>
+</section>
+
+<!-- 8 ============================================================ -->
+<section class="frame" id="f8">
+<h2 class="frame-title">8. 朋友转发 · 我用朋友的中转（有节点的一方）</h2>
+<p class="frame-note">这一方不用登录任何服务器。程序把所选配置的入口换成朋友的中转入口，另存一份新配置，原配置不动，随时能换回直连。朋友发回的文字里写着「转发到哪里」，程序会核对是不是你这份配置的节点，避免贴错；只贴了「IP:端口」时跳过这项核对，并提醒你用启动器的网络检测确认。</p>
+<div class="window">
+    <div class="titlebar"><span class="name"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#e76527" d="M12 2l2.2 4.6 4.6-1.4-1.4 4.6L22 12l-4.6 2.2 1.4 4.6-4.6-1.4L12 22l-2.2-4.6-4.6 1.4 1.4-4.6L2 12l4.6-2.2-1.4-4.6 4.6 1.4z"/></svg>MSBOOST 本地版</span><span class="wbtns"><span>—</span><span>✕</span></span></div>
+    <div class="client"><div class="shell">
+        <nav class="tabs">
+            <button class="tab"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>服务器</button>
+            <button class="tab">中转</button><button class="tab active">朋友转发</button><button class="tab">任务记录</button><button class="tab">设置与关于</button>
+            <div class="tabs-right"><span>v1.0.0</span><button class="link home-link">MSBOOST</button></div>
+        </nav>
+        <main class="content">
+            <div class="friend-top">
+                <span class="segmented"><button>我帮朋友转发</button><button class="on">我用朋友的中转</button></span>
+                <span class="hint">双方只交换 IP 和端口，都不用交出 SSH 或节点密码</span>
+            </div>
+            <ol class="flow">
+                <li class="mine"><b>1</b>你复制节点地址发给朋友</li>
+                <li><b>2</b>朋友在他的服务器上建转发</li>
+                <li><b>3</b>朋友把中转入口发回给你</li>
+                <li class="mine"><b>4</b>你用入口生成新配置</li>
+            </ol>
+            <section class="card">
+                <div class="card-head"><h2><span class="num">1</span>把节点地址发给朋友</h2><span class="hint">不需要登录任何服务器</span></div>
+                <div class="form-grid wide">
+                    <label>我的节点配置</label><div class="with"><select style="width:240px"><option>东京节点.json</option></select><span class="hint">网站或本地版部署的配置都可以</span></div>
+                    <label>要发的内容</label><div class="share-out"><span class="mono">MSBOOST 转发请求 203.0.113.10:34917</span><button class="small primary">复制</button></div>
+                </div>
+                <p class="hint">只有节点的 IP 和端口，没有用户名和密码；朋友拿到它也用不了你的节点。</p>
+            </section>
+            <section class="card">
+                <div class="card-head"><h2><span class="num">4</span>用朋友发回的入口生成配置</h2></div>
+                <div class="form-grid wide">
+                    <label>朋友发回的</label><input value="MSBOOST 中转入口 198.51.100.88:41203 → 203.0.113.10:34917">
+                    <span></span><div class="checks"><span class="ok">✓ 入口 198.51.100.88:41203</span><span class="ok">✓ 转发到你这份配置的节点</span><span class="ok">✓ 本机到入口可达</span></div>
+                    <label>新配置名</label><div class="with"><input value="东京节点-经小明中转" style="width:220px"><span class="hint">.json</span><button class="primary" style="margin-left:auto">生成配置</button></div>
+                </div>
+                <p class="hint">生成后在启动器里选中这份配置，「网络检测」的「当前到游戏服务器 IPv4」应该是你节点的 IP。</p>
+            </section>
+        </main>
+        <footer class="statusbar"><div class="status-left">就绪</div><div>configs 里 4 个配置 · 启动器在同一文件夹</div></footer>
+    </div></div>
+</div>
+</section>
+
+<!-- 9 ============================================================ -->
+<section class="frame" id="f9">
+<h2 class="frame-title">9. 卸载</h2>
+<p class="frame-note">先登录读取要删的清单（只读），确认后才删除。清单在确认前如果变了（比如有人改过服务器），会拒绝执行，要求重新读取。和网站的卸载清理是同一套脚本。</p>
+<div class="window">
+    <div class="titlebar"><span class="name"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#e76527" d="M12 2l2.2 4.6 4.6-1.4-1.4 4.6L22 12l-4.6 2.2 1.4 4.6-4.6-1.4L12 22l-2.2-4.6-4.6 1.4 1.4-4.6L2 12l4.6-2.2-1.4-4.6 4.6 1.4z"/></svg>MSBOOST 本地版</span><span class="wbtns"><span>—</span><span>✕</span></span></div>
+    <div class="client"><div class="shell">
+        <nav class="tabs">
+            <button class="tab active"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>服务器</button>
+            <button class="tab">中转</button><button class="tab">朋友转发</button><button class="tab">任务记录</button><button class="tab">设置与关于</button>
+            <div class="tabs-right"><span>v1.0.0</span><button class="link home-link">MSBOOST</button></div>
+        </nav>
+        <main class="content">
+            <div class="split">
+                <div class="col"><section class="card fill"><div class="card-head"><h2>服务器</h2><button class="small primary">添加</button></div>
+                    <ul class="server-list"><li class="sel"><div class="top"><span class="name">东京节点</span><span class="tag ok"><span class="dot"></span>节点运行中</span></div><span class="addr">203.0.113.10</span></li><li><div class="top"><span class="name">洛杉矶中转</span><span class="tag">中转 3 条</span></div><span class="addr">198.51.100.20</span></li></ul></section></div>
+                <div class="col"><section class="card fill"></section></div>
+            </div>
+        </main>
+        <footer class="statusbar"><div class="status-left">就绪</div><div>configs 里 4 个配置 · 启动器在同一文件夹</div></footer>
+    </div>
+    <div class="modal-backdrop"><div class="modal" style="width:480px">
+        <h3>卸载 东京节点 上的节点</h3>
+        <div class="modal-body">
+            <p>将删除以下 8 项：</p>
+            <ul class="paths">
+                <li><span class="k">文件</span>/etc/msboost/relay_tcp_probe.py</li>
+                <li><span class="k">文件</span>/etc/msboost/tcp-probe.json</li>
+                <li><span class="k">文件</span>/etc/systemd/system/msboost-tcp-probe.service</li>
+                <li><span class="k">目录</span>/etc/msboost</li>
+                <li><span class="k">目录</span>/var/lib/msboost</li>
+                <li><span class="k">文件</span>/usr/local/bin/msboost</li>
+                <li><span class="k">文件</span>/etc/systemd/system/msboost.service</li>
+                <li><span class="k">文件</span>/root/直连.json</li>
+            </ul>
+            <div class="banner warn">卸载后，这台节点的所有配置文件都会失效。系统、其他软件和不是本工具加的防火墙规则不受影响。</div>
+        </div>
+        <div class="modal-actions"><button>取消</button><button class="danger">确认卸载</button></div>
+    </div></div>
+    </div>
+</div>
+</section>
+
+<!-- 10 ============================================================ -->
+<section class="frame" id="f10">
+<h2 class="frame-title">10. 任务记录</h2>
+<p class="frame-note">记录每次操作的时间、服务器、结果和失败原因，存在 exe 旁的 local 文件夹。不含密码，也不含配置内容。</p>
+<div class="window">
+    <div class="titlebar"><span class="name"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#e76527" d="M12 2l2.2 4.6 4.6-1.4-1.4 4.6L22 12l-4.6 2.2 1.4 4.6-4.6-1.4L12 22l-2.2-4.6-4.6 1.4 1.4-4.6L2 12l4.6-2.2-1.4-4.6 4.6 1.4z"/></svg>MSBOOST 本地版</span><span class="wbtns"><span>—</span><span>✕</span></span></div>
+    <div class="client"><div class="shell">
+        <nav class="tabs">
+            <button class="tab"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>服务器</button>
+            <button class="tab">中转</button><button class="tab">朋友转发</button><button class="tab active">任务记录</button><button class="tab">设置与关于</button>
+            <div class="tabs-right"><span>v1.0.0</span><button class="link home-link">MSBOOST</button></div>
+        </nav>
+        <main class="content">
+            <section class="card">
+                <div class="card-head"><h2>任务记录</h2><button class="small">清空记录</button></div>
+                <table class="list">
+                    <thead><tr><th>时间</th><th>服务器</th><th>操作</th><th>结果</th><th>用时</th></tr></thead>
+                    <tbody>
+                        <tr class="sel"><td>10-22 10:41</td><td>新加坡</td><td>部署节点</td><td class="ok">成功</td><td>2 分 31 秒</td></tr>
+                        <tr><td>10-22 10:30</td><td>洛杉矶中转</td><td>新建中转</td><td class="ok">成功</td><td>48 秒</td></tr>
+                        <tr><td>10-22 10:25</td><td>东京节点</td><td>取回配置</td><td class="ok">成功</td><td>3 秒</td></tr>
+                        <tr><td>10-22 10:24</td><td>东京节点</td><td>取回配置</td><td class="bad">SSH 认证失败</td><td>2 秒</td></tr>
+                        <tr><td>10-21 23:58</td><td>东京节点</td><td>升级节点</td><td class="ok">成功</td><td>1 分 50 秒</td></tr>
+                    </tbody>
+                </table>
+            </section>
+            <section class="card fill">
+                <div class="card-head"><h2>10-22 10:41 部署节点 · 新加坡</h2><span class="ok small">成功</span></div>
+                <dl class="facts">
+                    <dt>服务器</dt><dd>192.0.2.30:22，指纹 SHA256:pW7r…qN4i</dd>
+                    <dt>结果</dt><dd>节点服务运行中，本机自测通过，本机到节点端口可达，BBR 已开启</dd>
+                    <dt>配置文件</dt><dd>configs\新加坡.json</dd>
+                </dl>
+            </section>
+        </main>
+        <footer class="statusbar"><div class="status-left">就绪</div><div>configs 里 4 个配置 · 启动器在同一文件夹</div></footer>
+    </div></div>
+</div>
+</section>
+
+<!-- 11 ============================================================ -->
+<section class="frame" id="f11">
+<h2 class="frame-title">11. 设置与关于</h2>
+<p class="frame-note"><b>SSH 经本机代理</b>：在国内直连 VPS 的 SSH 不稳定时打开，比如填 v2rayN 的本地 SOCKS 端口；部署后的端口检查仍然直连。<b>启动器位置</b>：本地版和启动器放在同一文件夹时自动识别，否则在这里指定。</p>
+<div class="window">
+    <div class="titlebar"><span class="name"><svg width="16" height="16" viewBox="0 0 24 24"><path fill="#e76527" d="M12 2l2.2 4.6 4.6-1.4-1.4 4.6L22 12l-4.6 2.2 1.4 4.6-4.6-1.4L12 22l-2.2-4.6-4.6 1.4 1.4-4.6L2 12l4.6-2.2-1.4-4.6 4.6 1.4z"/></svg>MSBOOST 本地版</span><span class="wbtns"><span>—</span><span>✕</span></span></div>
+    <div class="client"><div class="shell">
+        <nav class="tabs">
+            <button class="tab"><svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="7" rx="2"/><rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 7.5h.01M7 16.5h.01"/></svg>服务器</button>
+            <button class="tab">中转</button><button class="tab">朋友转发</button><button class="tab">任务记录</button><button class="tab active">设置与关于</button>
+            <div class="tabs-right"><span>v1.0.0</span><button class="link home-link">MSBOOST</button></div>
+        </nav>
+        <main class="content">
+            <section class="card">
+                <div class="card-head"><h2>SSH 经本机代理</h2><span class="switch"><span class="track"><span class="thumb"></span></span></span></div>
+                <div class="row-actions"><span class="muted">SOCKS5 地址</span><input value="127.0.0.1" disabled style="width:140px"><span class="muted">端口</span><input value="10808" disabled style="width:80px"><span class="hint">打开后才能编辑</span></div>
+            </section>
+            <section class="card">
+                <div class="card-head"><h2>启动器</h2><button class="small">更改…</button></div>
+                <dl class="facts">
+                    <dt>位置</dt><dd><span class="mono">F:\MSBOOST\MSBOOST-Launcher.exe</span> <span class="hint">同一文件夹，自动识别</span></dd>
+                    <dt>配置文件</dt><dd>部署、取回和新建中转得到的配置存进 <span class="mono">F:\MSBOOST\configs</span></dd>
+                </dl>
+            </section>
+            <section class="card">
+                <div class="card-head"><h2>关于</h2><button class="small">开源许可…</button></div>
+                <dl class="facts">
+                    <dt>版本</dt><dd>v1.0.0 <span class="hint">安装脚本同步自网站 v2.7.0</span></dd>
+                    <dt>版权</dt><dd>Copyright © 2026 MSBOOST</dd>
+                </dl>
+                <p class="notice">本程序是自由软件，依据 GNU 通用公共许可证第 3 版（GPL-3.0）发布。本程序只连接你自己的服务器，不连接 MSBOOST 网站，也不上传任何信息。</p>
+            </section>
+        </main>
+        <footer class="statusbar"><div class="status-left">就绪</div><div>configs 里 4 个配置 · 启动器在同一文件夹</div></footer>
+    </div></div>
+</div>
+
+</section>
+</div>
+</body>
+</html>
