@@ -218,7 +218,8 @@ func exists(path string) bool {
 
 // SaveConfig writes a configuration into dir and returns its path.
 func SaveConfig(dir, name string, data []byte) (string, error) {
-	if name != filepath.Base(name) || !strings.HasSuffix(name, ".json") {
+	// Either slash is a separator on Windows, whatever the build platform.
+	if name != filepath.Base(name) || strings.ContainsAny(name, `/\`) || !strings.HasSuffix(name, ".json") {
 		return "", fmt.Errorf("配置文件名无效：%q", name)
 	}
 	if err := os.MkdirAll(dir, 0o755); err != nil {
