@@ -40,7 +40,13 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+      # The runner's %TEMP% contains an 8.3 short name (RUNNER~1). The synced
+      # cleanup fixture matches paths by prefix and Python expands short names,
+      # so its alias case fails there; runner.temp has no short names.
       - name: Test
+        env:
+          TMP: ${{ runner.temp }}
+          TEMP: ${{ runner.temp }}
         run: go test -count=1 ./...
 
       # Command-line tool for testing the engine against a real VPS.
