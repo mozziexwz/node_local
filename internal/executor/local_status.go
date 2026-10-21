@@ -21,6 +21,11 @@ if [ -r /etc/os-release ]; then
 fi
 printf 'MSBOOST_OS=%s %s\n' "$os_id" "$os_version"
 printf 'MSBOOST_BBR=%s\n' "$(sysctl -n net.ipv4.tcp_congestion_control 2>/dev/null || true)"
+relays=0
+if [ -d /etc/msboost-free ] && [ ! -L /etc/msboost-free ]; then
+  relays=$(find /etc/msboost-free -mindepth 1 -maxdepth 1 -type d 2>/dev/null | wc -l)
+fi
+printf 'MSBOOST_RELAYS=%s\n' "$relays"
 if [ ! -f /etc/msboost/install.env ]; then
   printf 'MSBOOST_INSTALLED=0\n'
   exit 0
@@ -45,6 +50,8 @@ type NodeStatus struct {
 	Engine    string `json:"engine"`    // engine version, e.g. "v1.19.32"
 	Entry     string `json:"entry"`     // the node's address from its configuration
 	PublicTCP string `json:"publicTCP"` // "reachable" or "unreachable" from this computer
+	// Relays counts the managed relays (relay and front entries) on the server.
+	Relays int `json:"relays"`
 	// Config is the node's client configuration, when it could be read.
 	Config json.RawMessage `json:"-"`
 }
@@ -74,6 +81,7 @@ func (e *Engine) NodeStatus(ctx context.Context, s SSH) (NodeStatus, Result) {
 	if marker(out, "MSBOOST_BBR") == "bbr" {
 		st.BBR = "enabled"
 	}
+	st.Relays, _ = strconv.Atoi(marker(out, "MSBOOST_RELAYS"))
 	r.State, r.Phase = "succeeded", "complete"
 	if marker(out, "MSBOOST_INSTALLED") != "1" {
 		return st, r

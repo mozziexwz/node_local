@@ -37,10 +37,17 @@ type Server struct {
 	TrustedAt   int64  `json:"trustedAt"` // Unix ms when the host key was trusted
 	// ConfigFile in ConfigDir is the configuration last written for this
 	// server's node.
-	ConfigFile string     `json:"configFile,omitempty"`
-	ConfigDir  string     `json:"configDir,omitempty"`
-	Node       *NodeState `json:"node,omitempty"`
-	CreatedAt  int64      `json:"createdAt"`
+	ConfigFile string        `json:"configFile,omitempty"`
+	ConfigDir  string        `json:"configDir,omitempty"`
+	Node       *NodeState    `json:"node,omitempty"`
+	Relays     *RelaySummary `json:"relays,omitempty"`
+	CreatedAt  int64         `json:"createdAt"`
+}
+
+// RelaySummary is how many managed relays the server had when last checked.
+type RelaySummary struct {
+	Count     int   `json:"count"`
+	CheckedAt int64 `json:"checkedAt"`
 }
 
 // NodeState is what the last task or status check found on the server.
@@ -173,7 +180,7 @@ func (s *Store) Add(v Server) (Server, error) {
 	v.ID = newID()
 	now := time.Now().UnixMilli()
 	v.CreatedAt, v.TrustedAt = now, now
-	v.ConfigFile, v.ConfigDir, v.Node = "", "", nil
+	v.ConfigFile, v.ConfigDir, v.Node, v.Relays = "", "", nil, nil
 	if err := s.saveLocked(append(append([]Server(nil), s.list...), v)); err != nil {
 		return Server{}, err
 	}

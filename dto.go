@@ -24,26 +24,27 @@ type OverviewDTO struct {
 
 // ServerDTO is a saved server for the server page.
 type ServerDTO struct {
-	ID          string             `json:"id"`
-	Label       string             `json:"label"`
-	Name        string             `json:"name"`
-	Host        string             `json:"host"`
-	Port        int                `json:"port"`
-	AuthMethod  string             `json:"authMethod"`
-	KeyPath     string             `json:"keyPath"`
-	Fingerprint string             `json:"fingerprint"`
-	Algorithm   string             `json:"algorithm"`
-	TrustedAt   int64              `json:"trustedAt"`
-	ConfigFile  string             `json:"configFile"`
-	ConfigPath  string             `json:"configPath"` // "" when the file is gone
-	InLauncher  bool               `json:"inLauncher"` // the file is where the launcher reads it
-	Node        *servers.NodeState `json:"node"`
+	ID          string                `json:"id"`
+	Label       string                `json:"label"`
+	Name        string                `json:"name"`
+	Host        string                `json:"host"`
+	Port        int                   `json:"port"`
+	AuthMethod  string                `json:"authMethod"`
+	KeyPath     string                `json:"keyPath"`
+	Fingerprint string                `json:"fingerprint"`
+	Algorithm   string                `json:"algorithm"`
+	TrustedAt   int64                 `json:"trustedAt"`
+	ConfigFile  string                `json:"configFile"`
+	ConfigPath  string                `json:"configPath"` // "" when the file is gone
+	InLauncher  bool                  `json:"inLauncher"` // the file is where the launcher reads it
+	Node        *servers.NodeState    `json:"node"`
+	Relays      *servers.RelaySummary `json:"relays"`
 }
 
 func toServerDTO(sv servers.Server, configsDir string, launcherFound bool) ServerDTO {
 	dto := ServerDTO{ID: sv.ID, Label: sv.Label(), Name: sv.Name, Host: sv.Host, Port: sv.Port, AuthMethod: sv.AuthMethod,
 		KeyPath: sv.KeyPath, Fingerprint: sv.Fingerprint, Algorithm: sv.Algorithm, TrustedAt: sv.TrustedAt,
-		ConfigFile: sv.ConfigFile, Node: sv.Node}
+		ConfigFile: sv.ConfigFile, Node: sv.Node, Relays: sv.Relays}
 	if sv.ConfigFile != "" {
 		path := filepath.Join(sv.ConfigDir, sv.ConfigFile)
 		if _, err := os.Stat(path); err == nil {
@@ -63,6 +64,34 @@ type ServerInput struct {
 	KeyPath     string `json:"keyPath"`
 	Fingerprint string `json:"fingerprint"`
 	Algorithm   string `json:"algorithm"`
+}
+
+// TaskOptions are StartTask's parameters for relays; see tasks.Options.
+type TaskOptions struct {
+	ConfigName      string   `json:"configName"` // a file in the configurations folder
+	FrontID         string   `json:"frontId"`
+	FrontPassword   string   `json:"frontPassword"`
+	FrontPassphrase string   `json:"frontPassphrase"`
+	Remark          string   `json:"remark"`
+	RateMbps        int      `json:"rateMbps"`
+	Target          string   `json:"target"`
+	Action          string   `json:"action"`
+	Items           []string `json:"items"`
+}
+
+// ConfigDTO is a node configuration in the configurations folder.
+type ConfigDTO struct {
+	Name  string `json:"name"`
+	Entry string `json:"entry"` // host:port it connects to
+}
+
+// FriendCheckDTO is CheckFriendEntry's answer.
+type FriendCheckDTO struct {
+	Entry     string `json:"entry"`
+	Target    string `json:"target"`
+	Node      string `json:"node"`
+	Matches   string `json:"matches"`   // yes, no or unknown
+	Reachable string `json:"reachable"` // from this computer
 }
 
 // ProbeDTO is a server's host key.
