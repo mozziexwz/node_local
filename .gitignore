@@ -1,6 +1,7 @@
 # 构建产物与缓存
 /build/bin/
 /build/release/
+/build/cli/
 /.cache/
 /frontend/node_modules/
 /frontend/dist/*

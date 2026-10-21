@@ -1,0 +1,158 @@
+{
+  "repository": "https://github.com/mozziexwz/node",
+  "tag": "v2.7.0",
+  "commit": "c32640d0b5e280b505e0a296c6e0160f293fbc73",
+  "files": [
+    {
+      "path": "installers/gost.json",
+      "from": "deploy/agent-executor.env.example",
+      "sha256": "208194976221b3ab7881b7b7d4eec4e974c9a365360746d8b4dde17ca835e24d",
+      "derived": true
+    },
+    {
+      "path": "installers/node/msboost.sh",
+      "from": "installers/node/msboost.sh",
+      "sha256": "fa06ea04d09050039e9044fd4d0701bac49744b157b67b5e6007bd299d040c53"
+    },
+    {
+      "path": "internal/executor/bbr.go",
+      "from": "internal/executor/bbr.go",
+      "sha256": "9f8fd5f2477b292655ea2f5c02355c811a98baecd11cf42488ae6b70dfd8032d"
+    },
+    {
+      "path": "internal/executor/bbr_failure_test.go",
+      "from": "internal/executor/bbr_failure_test.go",
+      "sha256": "fdfd97ca881759740f8b6e53b4e79d8fdecc702d26b46454a119d9f4e465d0b9"
+    },
+    {
+      "path": "internal/executor/bbr_test.go",
+      "from": "internal/executor/bbr_test.go",
+      "sha256": "85b5ee81c3e834c7a33b067499ae42864def12ffb5f693634fe7ac7492f10174"
+    },
+    {
+      "path": "internal/executor/cleanup.go",
+      "from": "internal/executor/cleanup.go",
+      "sha256": "fb502d9cc2508c3ceeea21917b4a2f05b5fe1beb79d02c750e7ee33848b33dd1"
+    },
+    {
+      "path": "internal/executor/debian_preflight_test.go",
+      "from": "internal/executor/debian_preflight_test.go",
+      "sha256": "1b8faae858ea733f8c3f7242417091436e8eb357c31a4062990d0d6c232ba9cc"
+    },
+    {
+      "path": "internal/executor/diagnostics.go",
+      "from": "internal/executor/diagnostics.go",
+      "sha256": "b86148195b220216c9fdaeffb1929936722bb46f40947f986d736570a976c522"
+    },
+    {
+      "path": "internal/executor/engine.go",
+      "from": "internal/executor/engine.go",
+      "sha256": "1fd6832add9a4dc6b5ae7eeadeb518a023a0304777736d223f0103d6dd1e1d20"
+    },
+    {
+      "path": "internal/executor/executor_test.go",
+      "from": "internal/executor/executor_test.go",
+      "sha256": "90e7dda7b5e7ac34f984a5feeffebf6027373d0558ad72dfe9f57183f2726db0"
+    },
+    {
+      "path": "internal/executor/free_relay_guard.py",
+      "from": "internal/executor/free_relay_guard.py",
+      "sha256": "ef1d4b330df5c6428b1cc06f166d4299fe9e4728abf7e9d231a0b178d1d15028"
+    },
+    {
+      "path": "internal/executor/free_relay_guard_test.py",
+      "from": "internal/executor/free_relay_guard_test.py",
+      "sha256": "f820560f240b4c9eb87b85f9dcde8c7fc5fa24b7320004ebb1f4c6ecfa426d3e"
+    },
+    {
+      "path": "internal/executor/relay_cache.go",
+      "from": "internal/executor/relay_cache.go",
+      "sha256": "2695b520c12fba4a5bd729bc5221d18eb7c5597b2f1a25ddd45937d2584ff01b"
+    },
+    {
+      "path": "internal/executor/relay_cache_test.go",
+      "from": "internal/executor/relay_cache_test.go",
+      "sha256": "9597b3ffd104676cdbdb277b7f7a816fae8b29467ef12b525c5049e4cd856d2c"
+    },
+    {
+      "path": "internal/executor/relay_code_test.go",
+      "from": "internal/executor/relay_code_test.go",
+      "sha256": "7ed2efc0d4bf453f31ba2ab64234fb46918e76ef3cd1aad36ffb6161a72fabfc"
+    },
+    {
+      "path": "internal/executor/relay_manage.go",
+      "from": "internal/executor/relay_manage.go",
+      "sha256": "c6ee8ffa211b0d3b31b5874009fec5b2e3c635ddcaf3576c7a65b8b0360e208c"
+    },
+    {
+      "path": "internal/executor/relay_script.go",
+      "from": "internal/executor/relay_script.go",
+      "sha256": "da7a3a796dd4d6c5ec6e48b0f3a9efbcb29801ee86c3b577e0fcac30526228d9"
+    },
+    {
+      "path": "internal/executor/relay_service_test.go",
+      "from": "internal/executor/relay_service_test.go",
+      "sha256": "f8f6f7fe6fd0e0af03b1e4bc2ee420e1dc3ee03d0bb9e102ddddbb7d1b1f03f3"
+    },
+    {
+      "path": "internal/executor/remediation_test.go",
+      "from": "internal/executor/remediation_test.go",
+      "sha256": "a82e7240b1984826e6c655ba36b3596d1101f8775e15886c72338bf6c92c92a1"
+    },
+    {
+      "path": "internal/executor/scoped_cleanup_test.go",
+      "from": "internal/executor/scoped_cleanup_test.go",
+      "sha256": "d231c0f2e5ed6048852f2bb5efbf49209fd4c03d8ff9393e3b43f5350cda254e"
+    },
+    {
+      "path": "internal/executor/ssh.go",
+      "from": "internal/executor/ssh.go",
+      "sha256": "3bd0e2215cedd5e49db45faa569235f27f5f4d58f79ee8638b31db313b31e2ba"
+    },
+    {
+      "path": "internal/executor/sshkey.go",
+      "from": "internal/executor/sshkey.go",
+      "sha256": "5198e3aac79c9b6ee61982c719fcd87ae28e2755980b5ceea09df25b3dd5bae0"
+    },
+    {
+      "path": "internal/executor/tcp_probe_cleanup_test.go",
+      "from": "internal/executor/tcp_probe_cleanup_test.go",
+      "sha256": "84fac775f45f09285835606722ddf60505345e2458808f3347ae732ce8d39781"
+    },
+    {
+      "path": "internal/executor/types.go",
+      "from": "internal/executor/types.go",
+      "sha256": "3bd40c45030299b5f541f7ee7d3c44c74e42afa8597c7db258f428d1203fb57d"
+    },
+    {
+      "path": "internal/executor/validation.go",
+      "from": "internal/executor/validation.go",
+      "sha256": "fb9e827bee42304bed6bc72062f006f442a719ab29a284b81a2c91915d79ee3f"
+    },
+    {
+      "path": "internal/executor/verify.go",
+      "from": "internal/executor/verify.go",
+      "sha256": "8188ed0e0aed235702b3fac87e06eb283aba0cc328dd8267e1126275c2a35238"
+    },
+    {
+      "path": "internal/executor/verify_field_test.go",
+      "from": "internal/executor/verify_field_test.go",
+      "sha256": "17842843000fa8101420de95956c26a8e753f8c9d1e0e2d19adc1cd47f6d1ad1"
+    },
+    {
+      "path": "internal/executor/verify_mihomo.go",
+      "from": "internal/executor/verify_mihomo.go",
+      "sha256": "de77bf63138a3fa2350712cbe54ec62064742295af56e7db4b9b36887a1d828f"
+    },
+    {
+      "path": "internal/executor/verify_relay_test.go",
+      "from": "internal/executor/verify_relay_test.go",
+      "sha256": "dbc8314ad49559b611d4d0fc12b8a474fc20b1b74d6980807507b766d1517793"
+    },
+    {
+      "path": "internal/executor/verify_test.go",
+      "from": "internal/executor/verify_test.go",
+      "sha256": "72c8b6cebb86ad6eec41c008bdef170f4c0ba23e9024b9df71018c40138a3ba9"
+    }
+  ]
+}

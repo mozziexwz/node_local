@@ -1,0 +1,245 @@
+package executor
+
+import _ "embed"
+
+//go:embed free_relay_guard.py
+var freeRelayGuardPython string
+
+// User values arrive only in base64-decoded variables. Python renders JSON and
+// systemd receives fixed paths; no supplied value becomes executable shell text.
+var relayInstallScript = `
+[ "$(id -u)" = 0 ]
+command -v systemctl >/dev/null
+command -v flock >/dev/null
+[ ! -L /run/msboost-customer-cleanup.lock ]
+exec 8>/run/msboost-customer-cleanup.lock
+flock -n 8
+systemd_version=$(systemctl --version | awk 'NR==1 {print $2}')
+[ "$systemd_version" -ge 247 ]
+unit="msboost-free-${task_id}.service"
+confdir="/etc/msboost-free/${task_id}"
+[ ! -e "$confdir" ]
+[ ! -e "/etc/systemd/system/$unit" ]
+` + relayStageScript + `
+installed=0
+ufw_owned=0
+firewalld_runtime_owned=0
+firewalld_permanent_owned=0
+firewalld_zone=''
+cleanup() {
+  rm -rf -- "$work"
+  if [ "$installed" = 0 ]; then
+    if [ "$ufw_owned" = 1 ]; then ufw --force delete allow "$port/tcp" >/dev/null 2>&1 || true; fi
+    if [ "$firewalld_runtime_owned" = 1 ]; then firewall-cmd --zone="$firewalld_zone" --remove-port="$port/tcp" >/dev/null 2>&1 || true; fi
+    if [ "$firewalld_permanent_owned" = 1 ]; then firewall-cmd --permanent --zone="$firewalld_zone" --remove-port="$port/tcp" >/dev/null 2>&1 || true; fi
+    systemctl disable --now "$unit" >/dev/null 2>&1 || true
+    rm -f -- "/etc/systemd/system/$unit"
+    rm -rf -- "$confdir"
+    systemctl daemon-reload >/dev/null 2>&1 || true
+  fi
+}
+trap cleanup EXIT
+` + bbrTuneScript + `
+if ! command -v python3 >/dev/null || ! command -v curl >/dev/null || ! command -v tar >/dev/null; then
+  msboost_phase=dependencies
+  [ -f /etc/os-release ]
+  . /etc/os-release
+  case "$ID" in debian|ubuntu) ;; *) exit 1 ;; esac
+  export DEBIAN_FRONTEND=noninteractive
+  apt-get update > "$work/packages.log" 2>&1
+  apt-get install -y --no-install-recommends python3 curl tar ca-certificates >> "$work/packages.log" 2>&1
+fi
+msboost_phase=target
+python3 - "$target_host" "$target_port" <<'PY'
+import socket,sys
+with socket.create_connection((sys.argv[1],int(sys.argv[2])),timeout=10): pass
+PY
+msboost_phase=download
+curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 --max-time 180 "$gost_url" -o "$work/gost.tar.gz"
+` + relayBinaryScript + `
+install -d -m 0700 "$confdir"
+printf '%s\n' msboost-free-v1 > "$confdir/managed-by"
+` + "cat > \"$confdir/guard.py\" <<'PY'\n" + freeRelayGuardPython + "\nPY\nchmod 0600 -- \"$confdir/guard.py\"\n" + `
+cat > "/etc/systemd/system/$unit" <<EOF
+[Unit]
+Description=MSBOOST customer TCP forwarding
+After=network-online.target
+Wants=network-online.target
+[Service]
+Type=simple
+DynamicUser=true
+LoadCredential=config.json:${confdir}/config.json
+LoadCredential=guard.json:${confdir}/guard.json
+LoadCredential=guard.py:${confdir}/guard.py
+# systemd 247 (Debian 11) supports LoadCredential and environment expansion
+# in ExecStart, but not the newer %d specifier. Escape the dollar sign here so
+# the installing shell writes it literally into the unit for systemd to expand.
+ExecStart=/usr/bin/python3 \${CREDENTIALS_DIRECTORY}/guard.py /usr/local/libexec/msboost-free/gost-${gost_sha} \${CREDENTIALS_DIRECTORY}/config.json \${CREDENTIALS_DIRECTORY}/guard.json
+Restart=on-failure
+RestartSec=3
+KillMode=control-group
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+[Install]
+WantedBy=multi-user.target
+EOF
+systemctl daemon-reload
+msboost_phase=service
+for attempt in $(seq 1 12); do
+  ports=$(python3 - <<'PY'
+import secrets,socket
+for _ in range(100):
+    port=20000+secrets.randbelow(40000)
+    with socket.socket() as public, socket.socket() as backend:
+        try:
+            public.bind(('0.0.0.0',port))
+            backend.bind(('127.0.0.1',0))
+        except OSError: continue
+        backend_port=backend.getsockname()[1]
+        if backend_port==port: continue
+        print(port,backend_port);break
+else: raise SystemExit(1)
+PY
+)
+  read -r port backend_port <<< "$ports"
+  python3 - "$port" "$backend_port" "$target_host" "$target_port" "$confdir/config.json" "$confdir/guard.json" "$rate_bytes" <<'PY'
+import json,sys
+p,b,host,target,path,guard_path,rate=sys.argv[1:]
+address=('['+host+']' if ':' in host else host)+':'+target
+config={'services':[{'name':'msboost-free','addr':'127.0.0.1:'+b,'handler':{'type':'tcp'},'listener':{'type':'tcp'},'admission':'guard','forwarder':{'nodes':[{'name':'target','addr':address}]},'limiter':'per-port'}],'admissions':[{'name':'guard','whitelist':True,'matchers':['127.0.0.1']}],'limiters':[{'name':'per-port','limits':['$ 625000B 625000B']} ]}
+if int(rate)==0:
+    config['services'][0].pop('limiter')
+    config.pop('limiters')
+else:
+    config['limiters'][0]['limits']=['$ '+rate+'B '+rate+'B']
+with open(path,'w') as f: json.dump(config,f)
+with open(guard_path,'w') as f: json.dump({'publicPort':int(p),'backendPort':int(b)},f)
+PY
+  chmod 0600 -- "$confdir/config.json" "$confdir/guard.json"
+  systemctl reset-failed "$unit" >/dev/null 2>&1 || true
+  systemctl restart "$unit"
+  sleep 2
+  if systemctl is-active --quiet "$unit"; then
+    pid=$(systemctl show "$unit" -p MainPID --value)
+    if python3 - "$pid" "$port" <<'PY'
+import os,sys
+pid,port=sys.argv[1],int(sys.argv[2])
+inodes=set()
+for fd in os.listdir('/proc/'+pid+'/fd'):
+    try: val=os.readlink('/proc/'+pid+'/fd/'+fd)
+    except OSError: continue
+    if val.startswith('socket:['): inodes.add(val[8:-1])
+for name in ['tcp','tcp6']:
+    with open('/proc/net/'+name) as f:
+        for line in list(f)[1:]:
+            v=line.split()
+            if int(v[1].rsplit(':',1)[1],16)==port and v[3]=='0A' and v[9] in inodes: raise SystemExit(0)
+raise SystemExit(1)
+PY
+    then
+      if command -v ufw >/dev/null && ufw status 2>/dev/null | grep -q '^Status: active'; then
+        if ! ufw show added 2>/dev/null | grep -Eq "(^|[[:space:]])allow[[:space:]]+$port/tcp([[:space:]]|$)"; then
+          ufw allow "$port/tcp" >/dev/null
+          ufw_owned=1
+          printf '%s\n' "$port" > "$confdir/ufw-owned"
+        fi
+      fi
+      if command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1; then
+        firewalld_zone=$(firewall-cmd --get-default-zone)
+        [[ "$firewalld_zone" =~ ^[A-Za-z0-9_.-]+$ ]]
+        if ! firewall-cmd --quiet --zone="$firewalld_zone" --query-port="$port/tcp"; then
+          firewall-cmd --zone="$firewalld_zone" --add-port="$port/tcp" >/dev/null
+          firewalld_runtime_owned=1
+          printf '%s %s\n' "$firewalld_zone" "$port" > "$confdir/firewalld-runtime-owned"
+        fi
+        if ! firewall-cmd --quiet --permanent --zone="$firewalld_zone" --query-port="$port/tcp"; then
+          firewall-cmd --permanent --zone="$firewalld_zone" --add-port="$port/tcp" >/dev/null
+          firewalld_permanent_owned=1
+          printf '%s %s\n' "$firewalld_zone" "$port" > "$confdir/firewalld-permanent-owned"
+        fi
+      fi
+      if [ -n "$meta_source" ]; then
+        # User record for relay server management. It holds the user's email
+        # and node address only, never node credentials or SSH secrets.
+        python3 - "$confdir/meta.json" "$port" "$target_host" "$target_port" "$meta_rate" "$meta_source" "$meta_code_tail" "$meta_user" "$meta_panel" "$meta_remark" <<'PY'
+import datetime,json,os,sys
+path,port,host,target,rate,source,tail,user,panel,remark=sys.argv[1:]
+record={'version':1,'source':source}
+if tail: record['codeTail']=tail
+record.update({'user':user,'panel':panel,'target':('['+host+']' if ':' in host else host)+':'+target,'port':int(port),'rateMbps':int(rate),'remark':remark,'createdAt':datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ')})
+descriptor=os.open(path,os.O_WRONLY|os.O_CREAT|os.O_EXCL,0o600)
+with os.fdopen(descriptor,'w',encoding='utf-8') as stream: json.dump(record,stream,ensure_ascii=False)
+PY
+      fi
+      systemctl enable "$unit" >/dev/null
+      installed=1
+      printf 'MSBOOST_RELAY_PORT=%s\n' "$port"
+      exit 0
+    fi
+  fi
+  systemctl stop "$unit" >/dev/null 2>&1 || true
+done
+relay_fail service_failed
+`
+
+const relayCleanupScript = `
+[[ "$task_id" =~ ^[A-Za-z0-9_-]{1,100}$ ]]
+confdir="/etc/msboost-free/${task_id}"
+unit="msboost-free-${task_id}.service"
+[ ! -L /etc/msboost-free ] && [ ! -L "$confdir" ]
+[ ! -L "/etc/systemd/system/$unit" ]
+[ ! -L /run/msboost-customer-cleanup.lock ]
+exec 8>/run/msboost-customer-cleanup.lock
+flock -n 8
+if [ -e "/etc/systemd/system/$unit" ]; then
+  systemctl disable --now "$unit" >/dev/null 2>&1
+  [ "$(systemctl show "$unit" -p ActiveState --value)" = inactive ] || [ "$(systemctl show "$unit" -p ActiveState --value)" = failed ]
+  [ "$(systemctl show "$unit" -p MainPID --value)" = 0 ]
+fi
+if [ -f "$confdir/ufw-owned" ]; then
+  [ ! -L "$confdir/ufw-owned" ]
+  read -r port < "$confdir/ufw-owned"
+  [[ "$port" =~ ^[0-9]+$ ]]
+  ufw --force delete allow "$port/tcp" >/dev/null 2>&1
+fi
+for mode in runtime permanent; do
+  if [ -f "$confdir/firewalld-${mode}-owned" ]; then
+    [ ! -L "$confdir/firewalld-${mode}-owned" ]
+    read -r zone port < "$confdir/firewalld-${mode}-owned"
+    if [[ "$zone" =~ ^[A-Za-z0-9_.-]+$ && "$port" =~ ^[0-9]+$ ]]; then
+      args=()
+      if [ "$mode" = permanent ]; then args+=(--permanent); fi
+      firewall-cmd "${args[@]}" --zone="$zone" --remove-port="$port/tcp" >/dev/null 2>&1
+    else exit 1; fi
+  fi
+done
+rm -f -- "/etc/systemd/system/msboost-free-${task_id}.service"
+rm -rf -- "$confdir"
+systemctl daemon-reload
+`
+
+// relayVerifiedScript notes the last target verification in a relay's
+// meta.json. Only that key changes and the file stays private.
+const relayVerifiedScript = `
+[[ "$task_id" =~ ^[A-Za-z0-9_-]{1,100}$ ]]
+confdir="/etc/msboost-free/${task_id}"
+[ ! -L /etc/msboost-free ] && [ ! -L "$confdir" ] && [ -d "$confdir" ]
+[ -f "$confdir/meta.json" ] && [ ! -L "$confdir/meta.json" ]
+[ ! -L /run/msboost-customer-cleanup.lock ]
+exec 8>/run/msboost-customer-cleanup.lock
+flock -w 20 8
+python3 - "$confdir/meta.json" "$verify_code" "$verify_at" <<'PY'
+import json,os,sys
+path,code,at=sys.argv[1:]
+with open(path,encoding='utf-8') as stream: record=json.load(stream)
+if not isinstance(record,dict): raise SystemExit(1)
+record['verified']={'code':code,'at':at}
+temporary=path+'.verified'
+descriptor=os.open(temporary,os.O_WRONLY|os.O_CREAT|os.O_TRUNC|os.O_NOFOLLOW,0o600)
+with os.fdopen(descriptor,'w',encoding='utf-8') as stream: json.dump(record,stream,ensure_ascii=False)
+os.replace(temporary,path)
+PY
+`

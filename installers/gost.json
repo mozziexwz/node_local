@@ -1,0 +1,10 @@
+{
+  "amd64": {
+    "sha256": "676fb7f78d267b6ae73df719c0c7f2b565dde7147da935cfafbc1e1da558b6d5",
+    "url": "https://github.com/go-gost/gost/releases/download/v3.3.0/gost_3.3.0_linux_amd64.tar.gz"
+  },
+  "arm64": {
+    "sha256": "d03699e3f385d4ff5dad68046712adfcc7515325a064d2ab046e0bece30f8f8f",
+    "url": "https://github.com/go-gost/gost/releases/download/v3.3.0/gost_3.3.0_linux_arm64.tar.gz"
+  }
+}
