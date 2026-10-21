@@ -210,7 +210,13 @@ func report(r executor.Result) {
 		fmt.Println("本机已断开连接，服务器上的安装可能仍在继续；稍后用 fetch 取回配置确认。")
 	}
 	if h := r.Health; h != nil {
-		fmt.Printf("服务：%s　本地自测：%s　公网 TCP：%s　BBR：%s\n", h.Service, h.LocalSelfTest, h.PublicTCP, h.BBR)
+		var parts []string
+		for _, f := range [][2]string{{"服务", h.Service}, {"本地自测", h.LocalSelfTest}, {"公网 TCP", h.PublicTCP}, {"BBR", h.BBR}} {
+			if f[1] != "" {
+				parts = append(parts, f[0]+"："+f[1])
+			}
+		}
+		fmt.Println(strings.Join(parts, "　"))
 	}
 }
 
