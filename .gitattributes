@@ -1,0 +1,9 @@
+* text=auto eol=lf
+
+# Windows 脚本保持 CRLF
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 同步自网站仓库的安装脚本保持原始字节（sha256 记录在 UPSTREAM.json）
+/installers/node/** -text

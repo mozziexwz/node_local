@@ -1,0 +1,29 @@
+# 构建产物与缓存
+/build/bin/
+/build/release/
+/.cache/
+/frontend/node_modules/
+/frontend/dist/*
+!/frontend/dist/gitkeep
+/frontend/package.json.md5
+
+# 二进制
+*.exe
+*.test
+
+# 运行数据：服务器列表、任务记录、日志，以及生成的节点配置（含节点密码）
+/local/
+/configs/
+
+# 个人测试资料
+/_local/
+
+# 同步自网站的 Python 测试脚本运行时产生的缓存
+__pycache__/
+
+# 编辑器
+.vscode/
+.idea/
+
+# 本地开发工具（wails CLI 等）
+/.tools/
