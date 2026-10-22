@@ -107,6 +107,10 @@ function Licenses(props: {about: About, onClose: () => void}) {
             <table className="components">
                 <tbody>{rows(props.about.serverSide)}</tbody>
             </table>
+            <p>
+                {props.about.source}
+                全部第三方组件的版权声明与许可全文见程序旁边的 THIRD_PARTY_NOTICES.txt（在下载的 zip 里）。
+            </p>
             <div className="license-links">
                 <span className="muted">许可全文：</span>
                 {props.about.licenseTexts.map(l => (

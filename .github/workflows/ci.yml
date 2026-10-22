@@ -76,19 +76,24 @@ jobs:
           wails build -clean -m -platform windows/amd64 -ldflags "-X main.version=$version"
           if ($LASTEXITCODE -ne 0) { throw 'wails build failed' }
 
-      # The portable package: the program and its licence.
+      # The portable package: the program, a readme that says where the
+      # source is offered, and the licence files.
       - name: Assemble package
         shell: pwsh
         run: |
           $dir = 'build/release'
           New-Item -ItemType Directory -Force $dir | Out-Null
+          go run ./scripts/notices -o "$dir/THIRD_PARTY_NOTICES.txt"
+          if ($LASTEXITCODE -ne 0) { throw 'notices failed' }
           Copy-Item build/bin/MSBOOST-Local.exe $dir/
           Copy-Item LICENSE "$dir/LICENSE.txt"
+          $readme = (Get-Content build/package/README.txt -Raw -Encoding utf8).Replace('{{VERSION}}', $env:VERSION)
+          [IO.File]::WriteAllText((Join-Path $PWD "$dir/README.txt"), $readme.Replace("`r`n", "`n").Replace("`n", "`r`n"))
           (Get-ChildItem $dir -File) | ForEach-Object { '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash, $_.Name } | Set-Content "$dir/SHA256SUMS.txt"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: MSBOOST-Local-${{ env.VERSION }}-windows-x64
+          name: MSBOOST-Local-${{ env.VERSION }}-win-x64
           path: build/release/
           if-no-files-found: error
 
@@ -104,3 +109,35 @@ jobs:
           name: msboost-local-cli-windows-x64
           path: build/cli/
           if-no-files-found: error
+
+  # A v* tag produces a draft release: the program zip, the same version's
+  # source and their SHA-256. It is published by hand after the download and
+  # virus-scan checks in docs/m3/README.md. The website offers the same three
+  # files from its own download server.
+  release:
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v')
+    needs: [engine, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: MSBOOST-Local-${{ github.ref_name }}-win-x64
+          path: package
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          name="MSBOOST-Local-${GITHUB_REF_NAME}"
+          (cd package && zip -9 -r "../${name}-win-x64.zip" .)
+          git archive --format=zip --prefix="${name}-source/" -o "${name}-source.zip" HEAD
+          sha256sum "${name}-win-x64.zip" "${name}-source.zip" > SHA256SUMS.txt
+          # docs/releases/<tag>.md if written, otherwise the template.
+          notes="docs/releases/${GITHUB_REF_NAME}.md"
+          [ -f "$notes" ] || notes=docs/release-notes-template.md
+          sed "s/{{VERSION}}/${GITHUB_REF_NAME}/g" "$notes" > notes.md
+          gh release create "$GITHUB_REF_NAME" "${name}-win-x64.zip" "${name}-source.zip" SHA256SUMS.txt --draft --verify-tag --title "MSBOOST 本地版 ${GITHUB_REF_NAME}" --notes-file notes.md

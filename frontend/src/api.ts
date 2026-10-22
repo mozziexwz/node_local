@@ -203,6 +203,7 @@ export interface About {
     version: string
     copyright: string
     license: string
+    source: string // where a release's source is offered; '' for test builds
     scripts: string
     components: Component[]
     serverSide: Component[]

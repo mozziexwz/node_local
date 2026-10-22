@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"runtime/debug"
+	"strings"
 
 	"github.com/mozziexwz/node_local/installers"
 )
@@ -67,6 +68,17 @@ func scriptsSource() string {
 	return "安装脚本同步自 MSBOOST 网站 " + m.Tag + "（" + m.Commit[:7] + "）"
 }
 
+// sourceNotice says where the source of a release is offered: next to the
+// program, wherever it is downloaded (GPL-3.0 section 6d). The website does
+// not link the repository. Test builds are not distributed, so they say
+// nothing.
+func sourceNotice() string {
+	if !strings.HasPrefix(version, "v") {
+		return ""
+	}
+	return "同版本的完整源代码与本程序在同一下载位置提供：MSBOOST-Local-" + version + "-source.zip。"
+}
+
 // aboutInfo backs the about card. GPL-3.0 requires interactive programs to
 // show a copyright notice, the absence of warranty and how to read the
 // license. Component names appear only in the license dialog.
@@ -76,11 +88,12 @@ func aboutInfo() AboutDTO {
 		Copyright: copyrightNotice,
 		License: "MSBOOST 本地版是自由软件：你可以依据自由软件基金会发布的 GNU 通用公共许可证第 3 版（GPL-3.0）" +
 			"再发布和修改本程序。本程序不提供任何担保。本程序只连接你自己的服务器，不连接 MSBOOST 网站，也不上传任何信息。",
+		Source:  sourceNotice(),
 		Scripts: scriptsSource(),
 		Components: []ComponentDTO{
 			{Name: "Wails", Version: moduleVersion("github.com/wailsapp/wails/v2"), Copyright: "Copyright (c) 2018-Present Lea Anthony",
 				License: "MIT", URL: "https://wails.io"},
-			{Name: "Go 扩展库（crypto、net、sys、term）", Version: moduleVersion("golang.org/x/crypto"), Copyright: "Copyright 2009 The Go Authors",
+			{Name: "Go 扩展库（crypto、net、sys）", Version: moduleVersion("golang.org/x/crypto"), Copyright: "Copyright 2009 The Go Authors",
 				License: "BSD-3-Clause", URL: "https://pkg.go.dev/golang.org/x/crypto"},
 			{Name: "React", Version: "19", Copyright: "Copyright (c) Meta Platforms, Inc. and affiliates.",
 				License: "MIT", URL: "https://react.dev"},
