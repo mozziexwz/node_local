@@ -2,13 +2,14 @@
 
 在自己的电脑上用 SSH 直接部署和管理 MSBOOST 节点与自备中转。SSH 密码或私钥只在本机内存里使用，不经过网站，也不保存到硬盘。
 
-> **状态：M1（界面、部署与节点管理）实测中，尚未发布。** 规划见 [docs/MSBOOST本地版开发规划.md](docs/MSBOOST本地版开发规划.md)，各阶段测试说明在 [docs/m0](docs/m0/README.md)、[docs/m1](docs/m1/README.md)。
+> **状态：M2（自备中转、朋友中转与中转管理）实测中，尚未发布。** 规划见 [docs/MSBOOST本地版开发规划.md](docs/MSBOOST本地版开发规划.md)，各阶段测试说明在 [docs/m0](docs/m0/README.md)、[docs/m1](docs/m1/README.md)、[docs/m2](docs/m2/README.md)。
 
 ## 能做什么
 
 - 部署 MSBOOST 节点：与网站「部署 MSBOOST」使用同一个安装脚本，部署出的配置文件直接给 MSBOOST 启动器用。
 - 保留配置升级/修复节点、取回配置、查看节点状态。
 - 自备中转（可加前置机）与中转服务器管理。
+- 朋友中转：帮朋友建中转，或用朋友的中转生成新配置。双方只交换 IP 和端口，都不交出 SSH 或节点密码。
 - 卸载清理。
 
 中转码、捐赠权益线路、枫叶、工单等需要网站账户的功能，请继续使用网站。
@@ -28,9 +29,10 @@ go run ./scripts/syncnode -tag v2.7.0 -source ..\MSBOOST.DE
 ```text
 main.go, app.go, dto.go  Wails 界面入口与前端绑定（about.go：版本与开源许可）
 frontend/                界面（React + TypeScript + Vite）
-internal/executor/       执行引擎（同步自网站）与 local_*.go 本地补充（进度、升级、状态）
-internal/tasks/          任务运行：每台服务器同时一个任务、进度事件、任务记录
+internal/executor/       执行引擎（同步自网站）与 local_*.go 本地补充（进度、升级、状态、朋友中转）
+internal/tasks/          任务运行：每台服务器同时一个任务、进度事件、任务记录、朋友中转的分享文字
 internal/servers/        服务器列表（local\servers.json，不含密码）
+internal/relays/         中转的来源与备注（local\relays.json，不含密码）
 internal/store/          数据布局、设置、配置文件命名与保存、启动器识别
 internal/logx/           日志（密码打码）
 installers/              内嵌的节点安装脚本与 GOST 固定版本（同步自网站）
