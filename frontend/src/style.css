@@ -298,6 +298,10 @@ dd .hint, .fp + .hint {
     user-select: text;
 }
 
+.tabs-right .launch {
+    color: var(--ink);
+}
+
 .tabs-right .home-link {
     font-size: 11px;
     font-weight: 700;

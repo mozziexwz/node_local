@@ -3,7 +3,7 @@ import {api, busyEvent, ConfigItem, endpoints, errorText, FriendCheck, hostOf, O
 import {Banner, Card, Spinner} from '../components'
 import {useLaunch} from './launch'
 
-type Message = {kind: 'error' | 'info', text: string}
+type Message = {kind: 'error' | 'info', text: string, launcher?: boolean}
 
 const relaySteps = ['朋友复制节点地址发给你', '你在自己的服务器上建中转', '你把中转入口发回给朋友', '朋友用入口生成新配置']
 const nodeSteps = ['你复制节点地址发给朋友', '朋友在他的服务器上建中转', '朋友把中转入口发回给你', '你用入口生成新配置']
@@ -16,6 +16,7 @@ export function Friends(props: {
     const [role, setRole] = useState<'relay' | 'node'>('relay')
     const [message, setMessage] = useState<Message | null>(null)
     const showError = useCallback((text: string) => setMessage({kind: 'error', text}), [])
+    const openLauncher = () => api.openLauncher().catch(e => showError(errorText(e)))
     const steps = role === 'relay' ? relaySteps : nodeSteps
     const mine = role === 'relay' ? [1, 2] : [0, 3]
     return (
@@ -30,10 +31,14 @@ export function Friends(props: {
             <ol className="flow">
                 {steps.map((s, i) => <li key={s} className={mine.includes(i) ? 'mine' : ''}><b>{i + 1}</b>{s}</li>)}
             </ol>
-            {message && <Banner kind={message.kind} onClose={() => setMessage(null)}>{message.text}</Banner>}
+            {message && (
+                <Banner kind={message.kind} onClose={() => setMessage(null)}>
+                    {message.text}{message.launcher && <button className="link" onClick={openLauncher}>打开启动器</button>}
+                </Banner>
+            )}
             {role === 'relay'
                 ? <RelayForFriend {...props} onError={showError}/>
-                : <UseFriendRelay onMessage={setMessage}/>}
+                : <UseFriendRelay launcher={!!props.overview.launcher} onMessage={setMessage}/>}
         </div>
     )
 }
@@ -117,7 +122,7 @@ function RelayForFriend(props: {
 }
 
 // UseFriendRelay is the node owner's side: steps 1 and 4. Nothing logs in.
-function UseFriendRelay(props: {onMessage: (m: Message | null) => void}) {
+function UseFriendRelay(props: {launcher: boolean, onMessage: (m: Message | null) => void}) {
     const {onMessage} = props
     const [configs, setConfigs] = useState<ConfigItem[]>([])
     const [configName, setConfigName] = useState('')
@@ -162,7 +167,9 @@ function UseFriendRelay(props: {onMessage: (m: Message | null) => void}) {
         onMessage(null)
         try {
             const path = await api.saveFriendConfig(configName, text, name.trim())
-            onMessage({kind: 'info', text: `已保存为 ${path}。在启动器里选中它，「网络检测」的「当前到游戏服务器 IPv4」应该是你节点的 IP；原配置不变，随时能换回直连。`})
+            onMessage(props.launcher
+                ? {kind: 'info', launcher: true, text: `已保存为 ${path}。在启动器里选中它，「网络检测」的「当前到游戏服务器 IPv4」应该是你节点的 IP；原配置不变，随时能换回直连。`}
+                : {kind: 'info', text: `已保存为 ${path}。把它复制到启动器的 configs 文件夹后选中它，「网络检测」的「当前到游戏服务器 IPv4」应该是你节点的 IP；原配置不变。`})
             setText('')
         } catch (e) {
             onMessage({kind: 'error', text: errorText(e)})

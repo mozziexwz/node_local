@@ -79,6 +79,7 @@ export function Servers(props: Props) {
             setError(errorText(e))
         }
     }
+    const openLauncher = () => api.openLauncher().catch(e => setError(errorText(e)))
 
     let panel: ReactNode
     if (!server) {
@@ -93,7 +94,7 @@ export function Servers(props: Props) {
                             props.dismissTask(server.id)
                             start(server, task.kind === 'uninstall' ? 'uninstall-preview' : task.kind)
                         }}
-                        importToLauncher={() => importToLauncher(server)} rekey={() => setRekey(server)}/>
+                        importToLauncher={() => importToLauncher(server)} openLauncher={openLauncher} rekey={() => setRekey(server)}/>
     } else {
         panel = <>
             <Detail server={server} task={task} busy={busyEvent(props.tasks, server.id)} onStart={kind => start(server, kind)}
@@ -317,6 +318,7 @@ function Result(props: {
     done: () => void
     retry: () => void
     importToLauncher: () => void
+    openLauncher: () => void
     rekey: () => void
 }) {
     const {server, task} = props
@@ -365,7 +367,7 @@ function Result(props: {
                 {ok && o.configPath && <>
                     <button onClick={() => api.openFolder('configs')}>打开配置文件夹</button>
                     {server.inLauncher
-                        ? <button onClick={() => api.openLauncher()}>打开启动器</button>
+                        ? <button onClick={props.openLauncher}>打开启动器</button>
                         : <button onClick={props.importToLauncher}>导入到启动器…</button>}
                 </>}
                 {!ok && o.errorCode === 'ssh_host_changed' && <button onClick={props.rekey}>重新读取指纹…</button>}

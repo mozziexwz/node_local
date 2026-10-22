@@ -453,7 +453,11 @@ func (a *App) OpenLauncher() error {
 	verb, _ := xwindows.UTF16PtrFromString("open")
 	file, _ := xwindows.UTF16PtrFromString(exe)
 	dir, _ := xwindows.UTF16PtrFromString(launcher.Dir)
-	return xwindows.ShellExecute(0, verb, file, nil, dir, xwindows.SW_SHOWNORMAL)
+	err := xwindows.ShellExecute(0, verb, file, nil, dir, xwindows.SW_SHOWNORMAL)
+	if errors.Is(err, xwindows.ERROR_CANCELLED) {
+		return nil // the user declined the administrator prompt
+	}
+	return err
 }
 
 // About returns version and license information.

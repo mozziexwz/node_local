@@ -81,6 +81,7 @@ export function Relays(props: {
     else if (front && (front.id === relay.id || sameHost(front.host, relay.host))) problem = '前置机必须是中转服务器以外的另一台服务器'
     else if (front && sameHost(front.host, node)) problem = '前置机就是这份配置的节点本身，请换一台前置机，或者不用前置机'
     else if (!Number.isInteger(rateNumber) || rateNumber < 1 || rateNumber > 10) problem = '带宽为 1–10 Mbps'
+    const openLauncher = () => api.openLauncher().catch(e => showError(errorText(e)))
 
     const create = () => {
         if (!relay || problem) return
@@ -149,7 +150,8 @@ export function Relays(props: {
                         {problem || `建好后生成「${remark.trim() || '自备中转'}.json」；帮朋友建中转请用「朋友中转」页`}
                     </span>
                 </div>
-                {created && <Created task={created} done={() => props.dismissTask(created.serverId)}/>}
+                {created && <Created task={created} launcher={!!props.overview.launcher} openLauncher={openLauncher}
+                                     done={() => props.dismissTask(created.serverId)}/>}
             </Card>
 
             <Card className="fill" title={manageServer ? `${manageServer.label} 上的中转${shown ? `（${shown.length}）` : ''}` : '中转管理'} actions={<>
@@ -204,7 +206,7 @@ export function Relays(props: {
 }
 
 // Created shows the self relay task in progress or its result.
-function Created(props: {task: TaskEvent, done: () => void}) {
+function Created(props: {task: TaskEvent, launcher: boolean, openLauncher: () => void, done: () => void}) {
     const {task} = props
     const o = task.outcome ?? {}
     if (task.state === 'running') {
@@ -219,8 +221,10 @@ function Created(props: {task: TaskEvent, done: () => void}) {
     }
     return (
         <Banner kind="info" onClose={props.done}>
-            中转已建好，入口 {o.entry}{o.health?.publicTCP === 'unreachable' && '（本机暂时连不上入口，请检查服务商安全组是否放行这个端口）'}。
-            配置已保存为 {o.configPath}，在启动器的「节点配置」里选中它即可使用。
+            中转已建好，入口 {o.entry}{o.health?.publicTCP === 'unreachable' && '（本机暂时连不上入口，请检查服务商安全组是否放行这个端口）'}。配置已保存为 {o.configPath}
+            {props.launcher
+                ? <>，在启动器的「节点配置」里选中它即可使用。<button className="link" onClick={props.openLauncher}>打开启动器</button></>
+                : '。启动器不在同一文件夹，需要把它复制到启动器的 configs 文件夹。'}
         </Banner>
     )
 }

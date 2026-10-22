@@ -80,6 +80,7 @@ function LauncherHint(props: {onPicked: () => void, onClose: () => void}) {
 export default function App() {
     const [page, setPage] = useState<Page>('servers')
     const [launcherHint, setLauncherHint] = useState(true)
+    const [launchError, setLaunchError] = useState('')
     // The server the 中转 page opens with, when another page sent us there.
     const [relayFocus, setRelayFocus] = useState('')
     const [overview, setOverview] = useState<Overview | null>(null)
@@ -144,6 +145,13 @@ export default function App() {
         return next
     }), [])
 
+    // The launcher asks for administrator rights itself; a running one comes
+    // to the front instead of starting twice.
+    const openLauncher = () => {
+        setLaunchError('')
+        api.openLauncher().catch(e => setLaunchError(errorText(e)))
+    }
+
     const go = (p: Page, focus = '') => {
         setPage(p)
         setRelayFocus(focus)
@@ -182,6 +190,7 @@ export default function App() {
                     </button>
                 ))}
                 <div className="tabs-right">
+                    {overview?.launcher && <button className="small launch" onClick={openLauncher}>打开启动器</button>}
                     <span>{overview?.version}</span>
                     <button className="link home-link" onClick={() => api.openURL(homepage)}>MSBOOST</button>
                 </div>
@@ -190,6 +199,7 @@ export default function App() {
             <main className="content">
                 {(overview?.warnings ?? []).map(w => <Banner key={w} kind="warn">{w}</Banner>)}
                 {overview && !overview.launcher && launcherHint && <LauncherHint onPicked={refresh} onClose={() => setLauncherHint(false)}/>}
+                {launchError && <Banner kind="error" onClose={() => setLaunchError('')}>无法打开启动器：{launchError}</Banner>}
                 {loadError && <Banner kind="error">无法读取程序状态：{loadError}</Banner>}
                 {overview ? content : !loadError && <div className="loading"><Spinner/>正在加载…</div>}
             </main>
