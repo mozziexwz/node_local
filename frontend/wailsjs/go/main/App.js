@@ -14,8 +14,16 @@ export function CancelTask(arg1) {
   return window['go']['main']['App']['CancelTask'](arg1);
 }
 
+export function CheckFriendEntry(arg1, arg2) {
+  return window['go']['main']['App']['CheckFriendEntry'](arg1, arg2);
+}
+
 export function ClearRecords() {
   return window['go']['main']['App']['ClearRecords']();
+}
+
+export function Configs() {
+  return window['go']['main']['App']['Configs']();
 }
 
 export function ConfirmUninstall(arg1) {
@@ -32,6 +40,10 @@ export function DiscardUninstall(arg1) {
 
 export function ForgetLauncher() {
   return window['go']['main']['App']['ForgetLauncher']();
+}
+
+export function ForwardRequest(arg1) {
+  return window['go']['main']['App']['ForwardRequest'](arg1);
 }
 
 export function OpenFolder(arg1) {
@@ -74,16 +86,20 @@ export function ReplaceFingerprint(arg1, arg2, arg3) {
   return window['go']['main']['App']['ReplaceFingerprint'](arg1, arg2, arg3);
 }
 
+export function SaveFriendConfig(arg1, arg2, arg3) {
+  return window['go']['main']['App']['SaveFriendConfig'](arg1, arg2, arg3);
+}
+
 export function SaveProxy(arg1, arg2, arg3) {
   return window['go']['main']['App']['SaveProxy'](arg1, arg2, arg3);
 }
 
-export function SecretNeeded(arg1) {
-  return window['go']['main']['App']['SecretNeeded'](arg1);
+export function SecretNeeded(arg1, arg2) {
+  return window['go']['main']['App']['SecretNeeded'](arg1, arg2);
 }
 
-export function StartTask(arg1, arg2, arg3, arg4) {
-  return window['go']['main']['App']['StartTask'](arg1, arg2, arg3, arg4);
+export function StartTask(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['StartTask'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function UpdateServer(arg1, arg2) {

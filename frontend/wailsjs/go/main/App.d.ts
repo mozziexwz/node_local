@@ -9,7 +9,11 @@ export function AddServer(arg1:main.ServerInput):Promise<main.ServerDTO>;
 
 export function CancelTask(arg1:string):Promise<void>;
 
+export function CheckFriendEntry(arg1:string,arg2:string):Promise<main.FriendCheckDTO>;
+
 export function ClearRecords():Promise<void>;
+
+export function Configs():Promise<Array<main.ConfigDTO>>;
 
 export function ConfirmUninstall(arg1:string):Promise<tasks.Event>;
 
@@ -18,6 +22,8 @@ export function CopyToLauncher(arg1:string):Promise<string>;
 export function DiscardUninstall(arg1:string):Promise<void>;
 
 export function ForgetLauncher():Promise<void>;
+
+export function ForwardRequest(arg1:string):Promise<string>;
 
 export function OpenFolder(arg1:string):Promise<void>;
 
@@ -39,10 +45,12 @@ export function RemoveServer(arg1:string):Promise<void>;
 
 export function ReplaceFingerprint(arg1:string,arg2:string,arg3:string):Promise<main.ServerDTO>;
 
+export function SaveFriendConfig(arg1:string,arg2:string,arg3:string):Promise<string>;
+
 export function SaveProxy(arg1:boolean,arg2:string,arg3:number):Promise<void>;
 
-export function SecretNeeded(arg1:string):Promise<string>;
+export function SecretNeeded(arg1:string,arg2:string):Promise<string>;
 
-export function StartTask(arg1:string,arg2:string,arg3:string,arg4:string):Promise<tasks.Event>;
+export function StartTask(arg1:string,arg2:string,arg3:string,arg4:string,arg5:main.TaskOptions):Promise<tasks.Event>;
 
 export function UpdateServer(arg1:string,arg2:main.ServerInput):Promise<main.ServerDTO>;

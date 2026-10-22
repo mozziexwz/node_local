@@ -1,14 +1,18 @@
 import {ReactNode, useCallback, useEffect, useRef, useState} from 'react'
 import {api, errorText, kindLabels, on, Overview, TaskEvent} from './api'
 import {Banner, Confirm, ConfirmRequest, formatClock, Spinner, useClock} from './components'
+import {Friends} from './pages/Friends'
 import {Records} from './pages/Records'
+import {Relays} from './pages/Relays'
 import {Servers} from './pages/Servers'
 import {Settings} from './pages/Settings'
 
-type Page = 'servers' | 'records' | 'settings'
+type Page = 'servers' | 'relays' | 'friends' | 'records' | 'settings'
 
 const pages: {id: Page, label: string}[] = [
     {id: 'servers', label: '服务器'},
+    {id: 'relays', label: '中转'},
+    {id: 'friends', label: '朋友中转'},
     {id: 'records', label: '任务记录'},
     {id: 'settings', label: '设置与关于'},
 ]
@@ -48,8 +52,37 @@ function StatusBar(props: {overview: Overview | null, tasks: Record<string, Task
     )
 }
 
+// LauncherHint shows when the launcher is neither beside this program nor
+// chosen in the settings: the configurations made here would not show up in
+// the launcher.
+function LauncherHint(props: {onPicked: () => void, onClose: () => void}) {
+    const [error, setError] = useState('')
+    const pick = async () => {
+        setError('')
+        try {
+            if (await api.pickLauncher()) props.onPicked()
+        } catch (e) {
+            setError(errorText(e))
+        }
+    }
+    return <>
+        <Banner kind="warn" onClose={props.onClose}>
+            {'没有在本程序所在的文件夹找到 MSBOOST 启动器，生成的配置会存在本程序旁边的 configs 文件夹，启动器里看不到。' +
+                '建议把本程序放进启动器所在的文件夹（和 '}
+            <span className="nowrap">MSBOOST-Launcher.exe</span>
+            {' 放在一起）后重新打开，或者'}
+            <button className="link" onClick={pick}>指定启动器位置…</button>
+        </Banner>
+        {error && <Banner kind="error" onClose={() => setError('')}>{error}</Banner>}
+    </>
+}
+
 export default function App() {
     const [page, setPage] = useState<Page>('servers')
+    const [launcherHint, setLauncherHint] = useState(true)
+    const [launchError, setLaunchError] = useState('')
+    // The server the 中转 page opens with, when another page sent us there.
+    const [relayFocus, setRelayFocus] = useState('')
     const [overview, setOverview] = useState<Overview | null>(null)
     const [loadError, setLoadError] = useState('')
     // The latest event per server; finished ones stay until dismissed.
@@ -112,8 +145,16 @@ export default function App() {
         return next
     }), [])
 
-    const go = (p: Page) => {
+    // The launcher asks for administrator rights itself; a running one comes
+    // to the front instead of starting twice.
+    const openLauncher = () => {
+        setLaunchError('')
+        api.openLauncher().catch(e => setLaunchError(errorText(e)))
+    }
+
+    const go = (p: Page, focus = '') => {
         setPage(p)
+        setRelayFocus(focus)
         refresh()
     }
 
@@ -121,7 +162,14 @@ export default function App() {
     if (overview) {
         switch (page) {
             case 'servers':
-                content = <Servers overview={overview} tasks={tasks} refresh={refresh} confirm={confirm} dismissTask={dismissTask}/>
+                content = <Servers overview={overview} tasks={tasks} refresh={refresh} confirm={confirm} dismissTask={dismissTask}
+                                   openRelays={id => go('relays', id)}/>
+                break
+            case 'relays':
+                content = <Relays overview={overview} tasks={tasks} confirm={confirm} focus={relayFocus} dismissTask={dismissTask}/>
+                break
+            case 'friends':
+                content = <Friends overview={overview} tasks={tasks} dismissTask={dismissTask}/>
                 break
             case 'records':
                 content = <Records overview={overview} confirm={confirm}/>
@@ -142,6 +190,7 @@ export default function App() {
                     </button>
                 ))}
                 <div className="tabs-right">
+                    {overview?.launcher && <button className="small launch" onClick={openLauncher}>打开启动器</button>}
                     <span>{overview?.version}</span>
                     <button className="link home-link" onClick={() => api.openURL(homepage)}>MSBOOST</button>
                 </div>
@@ -149,6 +198,8 @@ export default function App() {
 
             <main className="content">
                 {(overview?.warnings ?? []).map(w => <Banner key={w} kind="warn">{w}</Banner>)}
+                {overview && !overview.launcher && launcherHint && <LauncherHint onPicked={refresh} onClose={() => setLauncherHint(false)}/>}
+                {launchError && <Banner kind="error" onClose={() => setLaunchError('')}>无法打开启动器：{launchError}</Banner>}
                 {loadError && <Banner kind="error">无法读取程序状态：{loadError}</Banner>}
                 {overview ? content : !loadError && <div className="loading"><Spinner/>正在加载…</div>}
             </main>

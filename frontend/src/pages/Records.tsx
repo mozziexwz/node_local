@@ -34,7 +34,7 @@ export function Records(props: {overview: Overview, confirm: AskConfirm}) {
         <div className="page fill">
             {error && <Banner kind="error" onClose={() => setError('')}>{error}</Banner>}
             <Card title="任务记录" className="records" actions={records && records.length > 0 && <button className="small" onClick={clear}>清空记录</button>}>
-                {records && records.length === 0 && <p className="empty">还没有任务记录。部署、升级、取回配置和卸载会记在这里。</p>}
+                {records && records.length === 0 && <p className="empty">还没有任务记录。部署、升级、取回配置、建中转和卸载会记在这里。</p>}
                 {records && records.length > 0 && (
                     <div className="table-scroll">
                         <table className="list">
@@ -64,6 +64,8 @@ export function Records(props: {overview: Overview, confirm: AskConfirm}) {
                         {o.message && <><dt>结果</dt><dd>{o.message}</dd></>}
                         {o.nextStep && <><dt>建议</dt><dd>{o.nextStep}</dd></>}
                         {o.errorCode && <><dt>诊断编号</dt><dd>{o.errorCode}</dd></>}
+                        {o.share ? <><dt>发给朋友</dt><dd className="path">{o.share}</dd></>
+                            : o.entry && <><dt>中转入口</dt><dd className="path">{o.entry}</dd></>}
                         {o.configPath && <><dt>配置文件</dt><dd className="path">{o.configPath}</dd></>}
                     </dl>
                 </Card>

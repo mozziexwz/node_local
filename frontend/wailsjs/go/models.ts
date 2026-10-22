@@ -34,6 +34,40 @@ export namespace executor {
 	        this.game = source["game"];
 	    }
 	}
+	export class Hop {
+	    fromHost: string;
+	    fromPort: number;
+	    toHost: string;
+	    toPort: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new Hop(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.fromHost = source["fromHost"];
+	        this.fromPort = source["fromPort"];
+	        this.toHost = source["toHost"];
+	        this.toPort = source["toPort"];
+	    }
+	}
+	export class RelayManageResult {
+	    id: string;
+	    ok: boolean;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RelayManageResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.ok = source["ok"];
+	        this.error = source["error"];
+	    }
+	}
 
 }
 
@@ -116,6 +150,40 @@ export namespace main {
 		}
 	}
 	
+	export class ConfigDTO {
+	    name: string;
+	    entry: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ConfigDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.entry = source["entry"];
+	    }
+	}
+	export class FriendCheckDTO {
+	    entry: string;
+	    target: string;
+	    node: string;
+	    matches: string;
+	    reachable: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FriendCheckDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.entry = source["entry"];
+	        this.target = source["target"];
+	        this.node = source["node"];
+	        this.matches = source["matches"];
+	        this.reachable = source["reachable"];
+	    }
+	}
 	
 	export class ServerDTO {
 	    id: string;
@@ -132,6 +200,7 @@ export namespace main {
 	    configPath: string;
 	    inLauncher: boolean;
 	    node?: servers.NodeState;
+	    relays?: servers.RelaySummary;
 	
 	    static createFrom(source: any = {}) {
 	        return new ServerDTO(source);
@@ -153,6 +222,7 @@ export namespace main {
 	        this.configPath = source["configPath"];
 	        this.inLauncher = source["inLauncher"];
 	        this.node = this.convertValues(source["node"], servers.NodeState);
+	        this.relays = this.convertValues(source["relays"], servers.RelaySummary);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -256,6 +326,34 @@ export namespace main {
 	        this.algorithm = source["algorithm"];
 	    }
 	}
+	export class TaskOptions {
+	    configName: string;
+	    frontId: string;
+	    frontPassword: string;
+	    frontPassphrase: string;
+	    remark: string;
+	    rateMbps: number;
+	    target: string;
+	    action: string;
+	    items: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TaskOptions(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.configName = source["configName"];
+	        this.frontId = source["frontId"];
+	        this.frontPassword = source["frontPassword"];
+	        this.frontPassphrase = source["frontPassphrase"];
+	        this.remark = source["remark"];
+	        this.rateMbps = source["rateMbps"];
+	        this.target = source["target"];
+	        this.action = source["action"];
+	        this.items = source["items"];
+	    }
+	}
 
 }
 
@@ -284,6 +382,20 @@ export namespace servers {
 	        this.os = source["os"];
 	        this.entry = source["entry"];
 	        this.publicTCP = source["publicTCP"];
+	        this.checkedAt = source["checkedAt"];
+	    }
+	}
+	export class RelaySummary {
+	    count: number;
+	    checkedAt: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RelaySummary(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.count = source["count"];
 	        this.checkedAt = source["checkedAt"];
 	    }
 	}
@@ -327,6 +439,38 @@ export namespace store {
 
 export namespace tasks {
 	
+	export class RelayRow {
+	    id: string;
+	    role: string;
+	    port: number;
+	    entry: string;
+	    rateMbps: number;
+	    target: string;
+	    state: string;
+	    connections: number;
+	    createdAt: number;
+	    source: string;
+	    remark: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RelayRow(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.role = source["role"];
+	        this.port = source["port"];
+	        this.entry = source["entry"];
+	        this.rateMbps = source["rateMbps"];
+	        this.target = source["target"];
+	        this.state = source["state"];
+	        this.connections = source["connections"];
+	        this.createdAt = source["createdAt"];
+	        this.source = source["source"];
+	        this.remark = source["remark"];
+	    }
+	}
 	export class Outcome {
 	    phase?: string;
 	    errorCode?: string;
@@ -337,6 +481,11 @@ export namespace tasks {
 	    configPath?: string;
 	    items?: executor.CleanupItem[];
 	    node?: servers.NodeState;
+	    hops?: executor.Hop[];
+	    entry?: string;
+	    share?: string;
+	    relays?: RelayRow[];
+	    managed?: executor.RelayManageResult[];
 	
 	    static createFrom(source: any = {}) {
 	        return new Outcome(source);
@@ -353,6 +502,11 @@ export namespace tasks {
 	        this.configPath = source["configPath"];
 	        this.items = this.convertValues(source["items"], executor.CleanupItem);
 	        this.node = this.convertValues(source["node"], servers.NodeState);
+	        this.hops = this.convertValues(source["hops"], executor.Hop);
+	        this.entry = source["entry"];
+	        this.share = source["share"];
+	        this.relays = this.convertValues(source["relays"], RelayRow);
+	        this.managed = this.convertValues(source["managed"], executor.RelayManageResult);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -376,6 +530,7 @@ export namespace tasks {
 	export class Event {
 	    id: string;
 	    serverId: string;
+	    frontId?: string;
 	    kind: string;
 	    state: string;
 	    step: number;
@@ -391,6 +546,7 @@ export namespace tasks {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
 	        this.serverId = source["serverId"];
+	        this.frontId = source["frontId"];
 	        this.kind = source["kind"];
 	        this.state = source["state"];
 	        this.step = source["step"];

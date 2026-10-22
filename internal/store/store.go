@@ -4,6 +4,7 @@
 //	                     is known, new configurations go to its configs\ instead
 //	local\servers.json   saved servers: addresses and pinned host keys, never passwords
 //	local\tasks.json     task records, without secrets or configuration contents
+//	local\relays.json    what the relays built here are for (remarks, targets)
 //	local\settings.json  SSH proxy and launcher location
 //	local\logs\          daily log files
 //	local\webview\       WebView2 cache
@@ -37,6 +38,7 @@ type Layout struct {
 	Webview  string
 	Servers  string
 	Tasks    string
+	Relays   string
 	Settings string
 }
 
@@ -51,6 +53,7 @@ func NewLayout(dir string) Layout {
 		Webview:  filepath.Join(local, "webview"),
 		Servers:  filepath.Join(local, "servers.json"),
 		Tasks:    filepath.Join(local, "tasks.json"),
+		Relays:   filepath.Join(local, "relays.json"),
 		Settings: filepath.Join(local, "settings.json"),
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -44,8 +45,10 @@ func NewApp(layout store.Layout, log *logx.Logger) *App {
 	if a.servers, err = servers.Open(layout.Servers); err != nil {
 		a.warnings = append(a.warnings, err.Error())
 	}
-	if a.runner, err = tasks.New(layout, a.servers, log, a.currentSettings, a.emitTask); err != nil {
-		a.warnings = append(a.warnings, err.Error())
+	var problems []error
+	a.runner, problems = tasks.New(layout, a.servers, log, a.currentSettings, a.emitTask)
+	for _, p := range problems {
+		a.warnings = append(a.warnings, p.Error())
 	}
 	return a
 }
@@ -152,6 +155,8 @@ func (a *App) UpdateServer(id string, in ServerInput) (ServerDTO, error) {
 	if err != nil {
 		return ServerDTO{}, err
 	}
+	// The login may have changed, so a remembered secret may no longer fit.
+	a.runner.ForgetSession(id)
 	return a.serverDTO(sv), nil
 }
 
@@ -167,6 +172,7 @@ func (a *App) ReplaceFingerprint(id, fingerprint, algorithm string) (ServerDTO, 
 	if err != nil {
 		return ServerDTO{}, err
 	}
+	a.runner.ForgetSession(id)
 	a.log.Printf(logx.App, "已替换 %s 的服务器指纹：%s → %s", sv.Label(), old, fingerprint)
 	return a.serverDTO(sv), nil
 }
@@ -180,6 +186,7 @@ func (a *App) RemoveServer(id string) error {
 	if err := a.servers.Remove(id); err != nil {
 		return err
 	}
+	a.runner.ForgetRelays(id)
 	a.log.Printf(logx.App, "已从列表移除服务器 %s（%s）", sv.Label(), sv.Address())
 	return nil
 }
@@ -206,13 +213,122 @@ func (a *App) PickKeyFile() (string, error) {
 
 // ---- tasks ----
 
-// SecretNeeded says what to ask before an operation: "password",
-// "passphrase", or "" for a key without a passphrase.
-func (a *App) SecretNeeded(serverID string) (string, error) { return a.runner.SecretNeeded(serverID) }
+// SecretNeeded says what to ask before an operation of this kind:
+// "password", "passphrase", or "" when nothing is needed.
+func (a *App) SecretNeeded(serverID, kind string) (string, error) {
+	return a.runner.SecretNeeded(serverID, tasks.Kind(kind))
+}
 
-// StartTask begins deploy, upgrade, fetch, status or uninstall-preview.
-func (a *App) StartTask(kind, serverID, password, passphrase string) (tasks.Event, error) {
-	return a.runner.Start(tasks.Kind(kind), serverID, tasks.Secret{Password: password, Passphrase: passphrase})
+// StartTask begins an operation; see tasks.Kind.
+func (a *App) StartTask(kind, serverID, password, passphrase string, opts TaskOptions) (tasks.Event, error) {
+	o := tasks.Options{FrontID: opts.FrontID, FrontSecret: tasks.Secret{Password: opts.FrontPassword, Passphrase: opts.FrontPassphrase},
+		Remark: strings.TrimSpace(opts.Remark), RateMbps: opts.RateMbps, Target: opts.Target, Action: opts.Action, Items: opts.Items}
+	if opts.ConfigName != "" {
+		path, err := a.configPath(opts.ConfigName)
+		if err != nil {
+			return tasks.Event{}, err
+		}
+		o.ConfigPath = path
+	}
+	return a.runner.Start(tasks.Kind(kind), serverID, tasks.Secret{Password: password, Passphrase: passphrase}, o)
+}
+
+// ---- configurations and friend relays ----
+
+// Configs lists the valid node configurations where new ones are saved.
+func (a *App) Configs() []ConfigDTO {
+	dir := a.layout.ConfigsDir(a.currentSettings())
+	entries, _ := os.ReadDir(dir)
+	out := []ConfigDTO{}
+	for _, e := range entries {
+		if e.IsDir() || !strings.EqualFold(filepath.Ext(e.Name()), ".json") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			continue
+		}
+		if entry, err := tasks.NodeEntry(data); err == nil {
+			out = append(out, ConfigDTO{Name: e.Name(), Entry: entry})
+		}
+	}
+	return out
+}
+
+func (a *App) configPath(name string) (string, error) {
+	if name != filepath.Base(name) || strings.ContainsAny(name, `/\`) || !strings.EqualFold(filepath.Ext(name), ".json") {
+		return "", fmt.Errorf("配置文件名无效：%q", name)
+	}
+	return filepath.Join(a.layout.ConfigsDir(a.currentSettings()), name), nil
+}
+
+func (a *App) readConfig(name string) ([]byte, error) {
+	path, err := a.configPath(name)
+	if err != nil {
+		return nil, err
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("无法读取配置 %s：%w", name, err)
+	}
+	return data, nil
+}
+
+// ForwardRequest is the text a node's owner sends to the friend who relays:
+// the node's address, nothing else.
+func (a *App) ForwardRequest(configName string) (string, error) {
+	data, err := a.readConfig(configName)
+	if err != nil {
+		return "", err
+	}
+	node, err := tasks.NodeEntry(data)
+	if err != nil {
+		return "", err
+	}
+	return tasks.ShareRequest(node), nil
+}
+
+// CheckFriendEntry reads the text a friend sent back, compares it with the
+// configuration's node and tests the entry from this computer.
+func (a *App) CheckFriendEntry(configName, text string) (FriendCheckDTO, error) {
+	data, err := a.readConfig(configName)
+	if err != nil {
+		return FriendCheckDTO{}, err
+	}
+	c, err := tasks.CheckFriendEntry(data, text)
+	if err != nil {
+		return FriendCheckDTO{}, err
+	}
+	reachable := "unreachable"
+	if conn, err := net.DialTimeout("tcp", c.Entry, 6*time.Second); err == nil {
+		conn.Close()
+		reachable = "reachable"
+	}
+	return FriendCheckDTO{Entry: c.Entry, Target: c.Target, Node: c.Node, Matches: c.Matches, Reachable: reachable}, nil
+}
+
+// SaveFriendConfig writes a new configuration that reaches the node through
+// the friend's relay; the original stays as it was. It returns the path.
+func (a *App) SaveFriendConfig(configName, text, name string) (string, error) {
+	data, err := a.readConfig(configName)
+	if err != nil {
+		return "", err
+	}
+	name = strings.TrimSpace(name)
+	out, err := tasks.FriendConfig(data, text, name)
+	if err != nil {
+		return "", err
+	}
+	if name == "" {
+		name = strings.TrimSuffix(configName, filepath.Ext(configName)) + "-经朋友中转"
+	}
+	dir := a.layout.ConfigsDir(a.currentSettings())
+	path, err := store.SaveConfig(dir, store.FreeConfigName(dir, store.ConfigName(name), ""), out)
+	if err != nil {
+		return "", err
+	}
+	a.log.Printf(logx.App, "已生成经朋友中转的配置：%s", path)
+	return path, nil
 }
 
 // ConfirmUninstall removes what the preview listed.
@@ -337,7 +453,11 @@ func (a *App) OpenLauncher() error {
 	verb, _ := xwindows.UTF16PtrFromString("open")
 	file, _ := xwindows.UTF16PtrFromString(exe)
 	dir, _ := xwindows.UTF16PtrFromString(launcher.Dir)
-	return xwindows.ShellExecute(0, verb, file, nil, dir, xwindows.SW_SHOWNORMAL)
+	err := xwindows.ShellExecute(0, verb, file, nil, dir, xwindows.SW_SHOWNORMAL)
+	if errors.Is(err, xwindows.ERROR_CANCELLED) {
+		return nil // the user declined the administrator prompt
+	}
+	return err
 }
 
 // About returns version and license information.
