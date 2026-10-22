@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
-import {api, busyEvent, ConfigItem, errorText, Overview, RelayRow, Server, TaskEvent} from '../api'
+import {api, busyEvent, ConfigItem, errorText, hostOf, Overview, RelayRow, sameHost, Server, TaskEvent} from '../api'
 import type {AskConfirm} from '../App'
 import {Banner, Card, Spinner} from '../components'
 import {RateDialog, UninstallDialog} from './dialogs'
@@ -72,11 +72,14 @@ export function Relays(props: {
     const config = configs.find(c => c.name === configName)
     const created = relay && props.tasks[relay.id]?.kind === 'relay' ? props.tasks[relay.id] : undefined
     const rateNumber = Number(rate)
+    // The node's own machine can be neither hop: traffic would only loop back to it.
+    const node = config ? hostOf(config.entry) : ''
     let problem = ''
     if (!relay) problem = '先在「服务器」页添加中转服务器'
     else if (!config) problem = '配置文件夹里还没有节点配置'
-    else if (config.entry.startsWith(relay.host + ':') || config.entry.startsWith('[' + relay.host + ']:')) problem = '中转服务器就是这份配置的节点本身'
-    else if (front && front.id === relay.id) problem = '前置机必须是另一台服务器'
+    else if (sameHost(relay.host, node)) problem = '中转服务器就是这份配置的节点本身，请换一台中转服务器'
+    else if (front && (front.id === relay.id || sameHost(front.host, relay.host))) problem = '前置机必须是中转服务器以外的另一台服务器'
+    else if (front && sameHost(front.host, node)) problem = '前置机就是这份配置的节点本身，请换一台前置机，或者不用前置机'
     else if (!Number.isInteger(rateNumber) || rateNumber < 1 || rateNumber > 10) problem = '带宽为 1–10 Mbps'
 
     const create = () => {
@@ -142,7 +145,9 @@ export function Relays(props: {
                     <input value={remark} maxLength={60} onChange={e => setRemark(e.target.value)}/>
                     <label>带宽</label>
                     <div className="rate"><input value={rate} inputMode="numeric" onChange={e => setRate(e.target.value.replace(/\D/g, ''))}/><span className="muted">Mbps，上下行各，1–10</span></div>
-                    <span className="hint wide">{problem || `建好后生成「${remark.trim() || '自备中转'}.json」；帮朋友建中转请用「朋友中转」页`}</span>
+                    <span className={'hint wide' + (problem ? ' warn-text' : '')}>
+                        {problem || `建好后生成「${remark.trim() || '自备中转'}.json」；帮朋友建中转请用「朋友中转」页`}
+                    </span>
                 </div>
                 {created && <Created task={created} done={() => props.dismissTask(created.serverId)}/>}
             </Card>

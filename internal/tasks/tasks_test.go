@@ -421,6 +421,7 @@ func TestRelayRejectsBadOptions(t *testing.T) {
 	for name, opts := range map[string]Options{
 		"missing config":   {ConfigPath: filepath.Join(t.TempDir(), "none.json")},
 		"front is relay":   {ConfigPath: path, FrontID: h.relay.ID, FrontSecret: Secret{Password: "x"}},
+		"front is node":    {ConfigPath: path, FrontID: h.server.ID, FrontSecret: Secret{Password: "x"}},
 		"front no secret":  {ConfigPath: path, FrontID: h.front.ID},
 		"rate too high":    {ConfigPath: path, RateMbps: 11},
 		"remark multiline": {ConfigPath: path, Remark: "a\nb"},
@@ -428,6 +429,17 @@ func TestRelayRejectsBadOptions(t *testing.T) {
 		if _, err := h.runner.Start(Relay, h.relay.ID, Secret{Password: sshPassword}, opts); err == nil {
 			t.Errorf("%s: accepted", name)
 		}
+	}
+	if _, err := h.runner.Start(Relay, h.server.ID, Secret{Password: sshPassword}, Options{ConfigPath: path}); err == nil {
+		t.Error("a relay on the node itself was accepted")
+	}
+	// The same machine added twice, under another SSH port, is still the relay.
+	twin, err := h.list.Add(servers.Server{Name: "同一台", Host: h.relay.Host, Port: 2222, AuthMethod: "password", Fingerprint: h.relay.Fingerprint})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.runner.Start(Relay, h.relay.ID, Secret{Password: sshPassword}, Options{ConfigPath: path, FrontID: twin.ID, FrontSecret: Secret{Password: "x"}}); err == nil {
+		t.Error("the relay's own machine was accepted as its front")
 	}
 	if _, err := h.runner.Start(Forward, h.relay.ID, Secret{Password: sshPassword}, Options{Target: "not an address"}); err == nil {
 		t.Error("forward without an address was accepted")

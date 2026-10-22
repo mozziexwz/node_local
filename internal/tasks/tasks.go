@@ -406,14 +406,22 @@ func (r *Runner) prepare(p *plan) error {
 		if err != nil {
 			return fmt.Errorf("无法读取节点配置：%v", err)
 		}
-		if _, err := executor.ParseClientConfig(raw); err != nil {
+		info, err := executor.ParseClientConfig(raw)
+		if err != nil {
 			return fmt.Errorf("节点配置无效：%v", err)
+		}
+		// A hop onto the node's own machine would only loop back to it.
+		if sameHost(p.server.Host, info.TargetHost) {
+			return errors.New("中转服务器就是这份配置的节点本身，请换一台中转服务器")
 		}
 		p.config = raw
 		if opts.FrontID != "" {
 			front, ok := r.servers.Get(opts.FrontID)
-			if !ok || front.ID == p.server.ID {
-				return errors.New("前置机必须是另一台服务器")
+			if !ok || front.ID == p.server.ID || sameHost(front.Host, p.server.Host) {
+				return errors.New("前置机必须是中转服务器以外的另一台服务器")
+			}
+			if sameHost(front.Host, info.TargetHost) {
+				return errors.New("前置机就是这份配置的节点本身，请换一台前置机，或者不用前置机")
 			}
 			conn, err := r.connection(front, opts.FrontSecret)
 			if err != nil {
@@ -438,6 +446,14 @@ func (r *Runner) prepare(p *plan) error {
 		}
 	}
 	return nil
+}
+
+// sameHost reports whether two addresses name the same machine.
+func sameHost(a, b string) bool {
+	if x, y := net.ParseIP(a), net.ParseIP(b); x != nil && y != nil {
+		return x.Equal(y)
+	}
+	return strings.EqualFold(a, b)
 }
 
 // ConfirmUninstall removes what the preview listed. The server refuses if

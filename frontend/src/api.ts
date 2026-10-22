@@ -325,3 +325,14 @@ export function busyEvent(tasks: Record<string, TaskEvent>, serverId: string): T
 export function endpoints(text: string): string[] {
     return text.match(/\[[0-9A-Fa-f:.]+\]:\d{1,5}|(?:\d{1,3}\.){3}\d{1,3}:\d{1,5}/g) ?? []
 }
+
+// hostOf is the host of "ip:port" or "[ipv6]:port".
+export function hostOf(entry: string): string {
+    return entry.replace(/:\d+$/, '').replace(/^\[(.*)\]$/, '$1')
+}
+
+// sameHost compares two hosts as written. The Go side checks again and also
+// catches other spellings of one IPv6 address.
+export function sameHost(a: string, b: string): boolean {
+    return a !== '' && a.toLowerCase() === b.toLowerCase()
+}

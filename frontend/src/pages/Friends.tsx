@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useState} from 'react'
-import {api, busyEvent, ConfigItem, endpoints, errorText, FriendCheck, Overview, TaskEvent} from '../api'
+import {api, busyEvent, ConfigItem, endpoints, errorText, FriendCheck, hostOf, Overview, TaskEvent} from '../api'
 import {Banner, Card, Spinner} from '../components'
 import {useLaunch} from './launch'
 
@@ -171,7 +171,7 @@ function UseFriendRelay(props: {onMessage: (m: Message | null) => void}) {
         }
     }
 
-    const nodeHost = check?.node.replace(/:\d+$/, '') ?? ''
+    const nodeHost = check ? hostOf(check.node) : ''
     return <>
         <Card title={<><span className="num">1</span>把节点地址发给朋友</>} actions={<span className="hint">不需要登录任何服务器</span>}>
             <div className="form-grid wide">
