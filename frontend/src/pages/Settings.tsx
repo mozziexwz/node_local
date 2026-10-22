@@ -109,7 +109,7 @@ function Licenses(props: {about: About, onClose: () => void}) {
             </table>
             <p>
                 {props.about.source}
-                全部第三方组件的版权声明与许可全文见程序旁边的 THIRD_PARTY_NOTICES.txt（在下载的 zip 里）。
+                全部第三方组件的版权声明与许可全文见程序旁边的 MSBOOST-Local-THIRD_PARTY_NOTICES.txt（在下载的 zip 里）。
             </p>
             <div className="license-links">
                 <span className="muted">许可全文：</span>

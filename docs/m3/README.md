@@ -10,10 +10,10 @@ M3 把程序做成可以发布的便携版：zip 里带上许可与说明文件�
 
 | 项目 | 内容 |
 |---|---|
-| 第三方声明 | `scripts/notices`（照启动器的做法）根据实际编进程序的 Go 依赖（`go list -deps`），加上 Go 本身和 React，生成 `THIRD_PARTY_NOTICES.txt`。相同的许可文本只写一次；文件开头说明 mihomo 和 GOST 由服务器自己下载，不在程序里 |
-| 说明文件 | zip 里的 `README.txt`：使用步骤、文件清单、卸载方法，以及同版本源码包的文件名。模板在 `build/package/README.txt`，CI 填入版本号，换成 CRLF 行尾，方便记事本打开 |
-| 开源许可对话框 | 加上源码位置（只有正式版显示，测试版不对外发布）和 `THIRD_PARTY_NOTICES.txt` 的说明；Go 扩展库去掉没有编进程序的 term |
-| 发布包 | CI 产物改名为 `MSBOOST-Local-<版本>-win-x64`，与网站的文件名一致。内含 `MSBOOST-Local.exe`、`README.txt`、`LICENSE.txt`、`THIRD_PARTY_NOTICES.txt` 和 `SHA256SUMS.txt` |
+| 第三方声明 | `scripts/notices`（照启动器的做法）根据实际编进程序的 Go 依赖（`go list -deps`），加上 Go 本身和 React，生成 `MSBOOST-Local-THIRD_PARTY_NOTICES.txt`。相同的许可文本只写一次；文件开头说明 mihomo 和 GOST 由服务器自己下载，不在程序里 |
+| 说明文件 | zip 里的 `MSBOOST-Local-README.txt`：使用步骤、文件清单、卸载方法，以及同版本源码包的文件名。模板在 `build/package/README.txt`，CI 填入版本号，换成 CRLF 行尾，方便记事本打开 |
+| 开源许可对话框 | 加上源码位置（只有正式版显示，测试版不对外发布）和 `MSBOOST-Local-THIRD_PARTY_NOTICES.txt` 的说明；Go 扩展库去掉没有编进程序的 term |
+| 发布包 | CI 产物改名为 `MSBOOST-Local-<版本>-win-x64`，与网站的文件名一致。内含 `MSBOOST-Local.exe` 和四个说明文件：`MSBOOST-Local-README.txt`、`MSBOOST-Local-LICENSE.txt`、`MSBOOST-Local-THIRD_PARTY_NOTICES.txt`、`MSBOOST-Local-SHA256SUMS.txt`。说明文件都带程序名前缀：用户会解压到启动器的文件夹，不能覆盖启动器自己的 `LICENSE.txt`、`THIRD_PARTY_NOTICES.txt` 和 `SHA256SUMS.txt` |
 | 正式发布 | 推送 `v*` 标签时，CI 编出带版本号的 exe（文件属性里的版本也会更新），等两个测试任务都通过后创建**草稿** Release，附上三个文件：`MSBOOST-Local-<版本>-win-x64.zip`、`MSBOOST-Local-<版本>-source.zip`（`git archive` 打包的同版本源码）和 `SHA256SUMS.txt`（两个 zip 的 SHA-256）。说明取自 `docs/releases/<版本>.md`，没有就用 [发布说明模板](../release-notes-template.md) |
 | 发布说明 | [v1.0.0](../releases/v1.0.0.md) |
 
@@ -25,9 +25,9 @@ M3 把程序做成可以发布的便携版：zip 里带上许可与说明文件�
 
 ### 测试 1：发布包
 
-1. 文件夹里只有 `MSBOOST-Local.exe`、`README.txt`、`LICENSE.txt`、`THIRD_PARTY_NOTICES.txt` 和 `SHA256SUMS.txt`。
-2. 用记事本打开 `README.txt` 和 `THIRD_PARTY_NOTICES.txt`：中文正常，分行正常。
-3. 在这个文件夹里打开命令提示符，执行下面的命令，结果应与 `SHA256SUMS.txt` 里 `MSBOOST-Local.exe` 那一行相同：
+1. 文件夹里只有 `MSBOOST-Local.exe` 和四个以 `MSBOOST-Local-` 开头的说明文件：`README`、`LICENSE`、`THIRD_PARTY_NOTICES`、`SHA256SUMS`。
+2. 用记事本打开 `MSBOOST-Local-README.txt` 和 `MSBOOST-Local-THIRD_PARTY_NOTICES.txt`：中文正常，分行正常。
+3. 在这个文件夹里打开命令提示符，执行下面的命令，结果应与 `MSBOOST-Local-SHA256SUMS.txt` 里 `MSBOOST-Local.exe` 那一行相同：
 
    ```bat
    certutil -hashfile MSBOOST-Local.exe SHA256
@@ -36,7 +36,7 @@ M3 把程序做成可以发布的便携版：zip 里带上许可与说明文件�
 ### 测试 2：开源许可
 
 打开程序，在「设置与关于」点「开源许可…」：
-- 应有组件表、服务器端组件，以及「全部第三方组件的版权声明与许可全文见程序旁边的 THIRD_PARTY_NOTICES.txt」。
+- 应有组件表、服务器端组件，以及「全部第三方组件的版权声明与许可全文见程序旁边的 MSBOOST-Local-THIRD_PARTY_NOTICES.txt」。
 - 测试版不显示源码包那一句，正式版才显示。
 
 ### 测试 3（可选）：干净的电脑
@@ -62,3 +62,11 @@ M3 的 PR 合并后，等你说发布再打标签。之后的步骤：
 3. 把三个文件上传到网盘 `MSBOOST本地版/v1.0.0/`。
 4. 在网站「系统设置 → MSBOOST 本地版」填写版本 `v1.0.0`、下载地址和 zip 的 SHA-256（在 `SHA256SUMS.txt` 里）。
 5. 在 GitHub 上发布草稿 Release。
+
+## 4. 测试记录
+
+### 2026-10-22，dev-29be085
+
+用户实测后回报「测试正常」。
+
+合并前又改了一处。本地版和启动器解压到同一文件夹时，两边的 `LICENSE.txt`、`THIRD_PARTY_NOTICES.txt` 和 `SHA256SUMS.txt` 同名，会覆盖启动器自己的文件。按用户的选择，包里的说明文件都加上 `MSBOOST-Local-` 前缀；程序本身没有变化。

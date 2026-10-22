@@ -77,19 +77,21 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'wails build failed' }
 
       # The portable package: the program, a readme that says where the
-      # source is offered, and the licence files.
+      # source is offered, and the licence files. The text files carry the
+      # program's name: users unzip it into the launcher's folder, whose own
+      # LICENSE.txt, THIRD_PARTY_NOTICES.txt and SHA256SUMS.txt must stay.
       - name: Assemble package
         shell: pwsh
         run: |
           $dir = 'build/release'
           New-Item -ItemType Directory -Force $dir | Out-Null
-          go run ./scripts/notices -o "$dir/THIRD_PARTY_NOTICES.txt"
+          go run ./scripts/notices -o "$dir/MSBOOST-Local-THIRD_PARTY_NOTICES.txt"
           if ($LASTEXITCODE -ne 0) { throw 'notices failed' }
           Copy-Item build/bin/MSBOOST-Local.exe $dir/
-          Copy-Item LICENSE "$dir/LICENSE.txt"
+          Copy-Item LICENSE "$dir/MSBOOST-Local-LICENSE.txt"
           $readme = (Get-Content build/package/README.txt -Raw -Encoding utf8).Replace('{{VERSION}}', $env:VERSION)
-          [IO.File]::WriteAllText((Join-Path $PWD "$dir/README.txt"), $readme.Replace("`r`n", "`n").Replace("`n", "`r`n"))
-          (Get-ChildItem $dir -File) | ForEach-Object { '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash, $_.Name } | Set-Content "$dir/SHA256SUMS.txt"
+          [IO.File]::WriteAllText((Join-Path $PWD "$dir/MSBOOST-Local-README.txt"), $readme.Replace("`r`n", "`n").Replace("`n", "`r`n"))
+          (Get-ChildItem $dir -File) | ForEach-Object { '{0}  {1}' -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash, $_.Name } | Set-Content "$dir/MSBOOST-Local-SHA256SUMS.txt"
 
       - uses: actions/upload-artifact@v4
         with:

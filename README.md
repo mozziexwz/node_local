@@ -48,8 +48,8 @@ internal/logx/           日志（密码打码）
 installers/              内嵌的节点安装脚本与 GOST 固定版本（同步自网站）
 cmd/msboost-local-cli/   测试用命令行：指纹、部署、取回配置、卸载清理（不随正式版发布）
 scripts/syncnode/        从网站仓库同步引擎和脚本
-scripts/notices/         生成发布包里的 THIRD_PARTY_NOTICES.txt
-build/package/           发布包里的 README.txt 模板
+scripts/notices/         生成发布包里的 MSBOOST-Local-THIRD_PARTY_NOTICES.txt
+build/package/           发布包里的 MSBOOST-Local-README.txt 模板
 docs/                    规划、界面样稿、各阶段说明与发布说明（releases/）
 ```
 

@@ -1,8 +1,8 @@
-// Command notices writes THIRD_PARTY_NOTICES.txt for the release zip: the
+// Command notices writes the third-party notices for the release zip: the
 // copyright and license texts of everything compiled into MSBOOST-Local.exe.
 // Run it from the repository root after the frontend install:
 //
-//	go run ./scripts/notices -o build/release/THIRD_PARTY_NOTICES.txt
+//	go run ./scripts/notices -o build/release/MSBOOST-Local-THIRD_PARTY_NOTICES.txt
 //
 // Go modules come from `go list -deps`, so the list follows go.mod. Texts
 // identical to LICENSE (GPL-3.0) point there instead of being repeated, and
@@ -32,7 +32,7 @@ type component struct {
 }
 
 func main() {
-	out := flag.String("o", "THIRD_PARTY_NOTICES.txt", "output file")
+	out := flag.String("o", "MSBOOST-Local-THIRD_PARTY_NOTICES.txt", "output file")
 	nodeModules := flag.String("node", "frontend/node_modules", "frontend node_modules folder")
 	flag.Parse()
 
@@ -198,7 +198,7 @@ func render(comps []component, gpl string) (string, error) {
 			base := strings.ToUpper(filepath.Base(f))
 			if strings.HasPrefix(base, "LICEN") || strings.HasPrefix(base, "COPYING") {
 				if text == gpl {
-					kinds = append(kinds, "GPL-3.0 (LICENSE.txt)")
+					kinds = append(kinds, "GPL-3.0 (MSBOOST-Local-LICENSE.txt)")
 					continue
 				}
 				kinds = append(kinds, licenseKind(text))
@@ -219,11 +219,11 @@ func render(comps []component, gpl string) (string, error) {
 	var sb strings.Builder
 	sb.WriteString("MSBOOST 本地版 — 第三方软件声明 / Third-party notices\n")
 	sb.WriteString(strings.Repeat("=", 78) + "\n\n")
-	sb.WriteString("MSBOOST 本地版依据 GNU 通用公共许可证第 3 版（GPL-3.0）发布，许可全文见 LICENSE.txt。\n")
+	sb.WriteString("MSBOOST 本地版依据 GNU 通用公共许可证第 3 版（GPL-3.0）发布，许可全文见 MSBOOST-Local-LICENSE.txt。\n")
 	sb.WriteString("本程序包含以下第三方软件，它们的版权声明与许可文本附在后面。\n")
 	sb.WriteString("部署节点和建中转时，服务器会从各自的官方发布页下载 mihomo 和 GOST；\n")
 	sb.WriteString("它们安装在服务器上，不包含在本程序里。\n\n")
-	sb.WriteString("MSBOOST Local is licensed under the GNU General Public License v3.0 (LICENSE.txt).\n")
+	sb.WriteString("MSBOOST Local is licensed under the GNU General Public License v3.0 (MSBOOST-Local-LICENSE.txt).\n")
 	sb.WriteString("It includes the third-party software listed below; their notices follow.\n")
 	sb.WriteString("The servers it sets up download mihomo and GOST from their own releases;\n")
 	sb.WriteString("neither is part of this program.\n\n")

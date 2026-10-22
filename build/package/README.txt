@@ -22,11 +22,14 @@ MSBOOST 本地版 {{VERSION}}
 
 文件
 ----
-MSBOOST-Local.exe        程序
-README.txt               本说明
-LICENSE.txt              GNU 通用公共许可证第 3 版（GPL-3.0）全文
-THIRD_PARTY_NOTICES.txt  所用第三方组件的版权声明与许可
-SHA256SUMS.txt           本文件夹里其他文件的 SHA-256
+MSBOOST-Local.exe                      程序
+MSBOOST-Local-README.txt               本说明
+MSBOOST-Local-LICENSE.txt              GNU 通用公共许可证第 3 版（GPL-3.0）全文
+MSBOOST-Local-THIRD_PARTY_NOTICES.txt  所用第三方组件的版权声明与许可
+MSBOOST-Local-SHA256SUMS.txt           上面几个文件的 SHA-256
+
+文件名都带「MSBOOST-Local」，解压到启动器的文件夹时不会覆盖启动器自己的
+LICENSE.txt、THIRD_PARTY_NOTICES.txt 和 SHA256SUMS.txt。
 
 源代码与许可
 ------------
