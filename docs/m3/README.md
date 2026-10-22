@@ -70,3 +70,18 @@ M3 的 PR 合并后，等你说发布再打标签。之后的步骤：
 用户实测后回报「测试正常」。
 
 合并前又改了一处。本地版和启动器解压到同一文件夹时，两边的 `LICENSE.txt`、`THIRD_PARTY_NOTICES.txt` 和 `SHA256SUMS.txt` 同名，会覆盖启动器自己的文件。按用户的选择，包里的说明文件都加上 `MSBOOST-Local-` 前缀；程序本身没有变化。
+
+## 5. 发布记录
+
+### v1.0.0（2026-10-22）
+
+- 标签 `v1.0.0` 打在 main 的 26390d5（M3 的合并提交）上，CI 生成草稿 Release，附三个文件：
+
+  | 文件 | 大小 | SHA-256 |
+  |---|---|---|
+  | `MSBOOST-Local-v1.0.0-win-x64.zip` | 5,447,502 字节 | `2bc7b7dec92d4c9cab2a95934caeb5fa969fe5861891254f6085e25b75b7283f` |
+  | `MSBOOST-Local-v1.0.0-source.zip` | 394,416 字节 | `a30189b926c56feda11174304af533b549148731786632e1c0661b82a27fb7de` |
+  | `SHA256SUMS.txt` | 197 字节 | 两个 zip 的 SHA-256 |
+
+- 用户用 Chrome 下载检查通过，三个文件已上传网盘，网站「系统设置 → MSBOOST 本地版」已填好。
+- Release 已公开发布：https://github.com/mozziexwz/node_local/releases/tag/v1.0.0

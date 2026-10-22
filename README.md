@@ -2,7 +2,7 @@
 
 在自己的电脑上用 SSH 直接部署和管理 MSBOOST 节点与自备中转。SSH 密码或私钥只在本机内存里使用，不经过网站，也不保存到硬盘。
 
-> **状态：M0–M2 已完成，M3（打包与发布）进行中，尚未发布。** 规划见 [docs/MSBOOST本地版开发规划.md](docs/MSBOOST本地版开发规划.md)，各阶段说明在 [docs/m0](docs/m0/README.md)、[docs/m1](docs/m1/README.md)、[docs/m2](docs/m2/README.md)、[docs/m3](docs/m3/README.md)。
+> **状态：v1.0.0 已于 2026-10-22 发布（M0–M3 完成）。** 规划见 [docs/MSBOOST本地版开发规划.md](docs/MSBOOST本地版开发规划.md)，各阶段说明在 [docs/m0](docs/m0/README.md)、[docs/m1](docs/m1/README.md)、[docs/m2](docs/m2/README.md)、[docs/m3](docs/m3/README.md)。
 
 ## 能做什么
 
@@ -16,7 +16,7 @@
 
 ## 下载
 
-正式版发布后，在 MSBOOST 网站的「MSBOOST 本地版」页下载。本仓库的 Releases 里有同样的三个文件：
+在 MSBOOST 网站的「MSBOOST 本地版」页下载。本仓库的 [Releases](https://github.com/mozziexwz/node_local/releases) 里有同样的三个文件：
 
 - 程序 `MSBOOST-Local-<版本>-win-x64.zip`
 - 同版本源代码 `MSBOOST-Local-<版本>-source.zip`
