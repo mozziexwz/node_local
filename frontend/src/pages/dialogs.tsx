@@ -1,5 +1,5 @@
-import {useEffect, useState} from 'react'
-import {api, errorText, itemKind, keyType, kindLabels, Probe, SecretKind, Server, TaskEvent, TaskKind} from '../api'
+import {ReactNode, useEffect, useState} from 'react'
+import {api, errorText, itemKind, keyType, kindLabels, Probe, RelayRow, SecretKind, Server, TaskEvent, TaskKind} from '../api'
 import {Banner, Dialog, Spinner} from '../components'
 
 // ServerDialog adds a server (reading and trusting its host key) or edits
@@ -207,6 +207,7 @@ export function FingerprintDialog(props: {server: Server, onClose: () => void, o
 // UninstallDialog shows what the preview found and confirms the removal.
 export function UninstallDialog(props: {server: Server, task: TaskEvent, onClose: () => void}) {
     const items = props.task.outcome?.items ?? []
+    const relay = props.task.kind === 'relay-uninstall-preview'
     const [busy, setBusy] = useState(false)
     const [error, setError] = useState('')
 
@@ -225,7 +226,7 @@ export function UninstallDialog(props: {server: Server, task: TaskEvent, onClose
     }
 
     return (
-        <Dialog title={`卸载 ${props.server.label} 上的节点`} width={500} busy={busy} onClose={cancel} actions={<>
+        <Dialog title={relay ? `卸载 ${props.server.label} 上的全部中转` : `卸载 ${props.server.label} 上的节点`} width={500} busy={busy} onClose={cancel} actions={<>
             <button autoFocus onClick={cancel} disabled={busy}>取消</button>
             <button className="danger" onClick={confirm} disabled={busy}>{busy && <Spinner/>}确认卸载</button>
         </>}>
@@ -233,7 +234,100 @@ export function UninstallDialog(props: {server: Server, task: TaskEvent, onClose
             <ul className="paths">
                 {items.map(i => <li key={i.kind + i.path}><span className="k">{itemKind(i.kind)}</span>{i.path}</li>)}
             </ul>
-            <Banner kind="warn">卸载后，这台节点的所有配置文件都会失效。系统、其他软件和不是本程序加的防火墙规则不受影响。</Banner>
+            <Banner kind="warn">{relay
+                ? '卸载后，这台服务器上的中转全部断开，包括网站建的和给朋友的；经过它们的配置都会失效。节点、系统和其他软件不受影响。'
+                : '卸载后，这台节点的所有配置文件都会失效。系统、其他软件和不是本程序加的防火墙规则不受影响。'}</Banner>
+            {error && <Banner kind="error">{error}</Banner>}
+        </Dialog>
+    )
+}
+
+// CredentialRequest asks for one server's root password or key passphrase.
+export interface CredentialRequest {
+    server: Server
+    need: SecretKind
+    role?: string // e.g. "中转服务器", "前置机"
+}
+
+// CredentialsDialog collects the secrets an operation needs, one per server,
+// and hands them to onSubmit in order.
+export function CredentialsDialog(props: {
+    title: string
+    requests: CredentialRequest[]
+    confirm: string
+    warning?: ReactNode
+    onClose: () => void
+    onSubmit: (values: string[]) => Promise<void>
+}) {
+    const [values, setValues] = useState(props.requests.map(() => ''))
+    const [show, setShow] = useState(false)
+    const [busy, setBusy] = useState(false)
+    const [error, setError] = useState('')
+    const ready = values.every(v => v !== '')
+
+    const submit = async () => {
+        if (!ready || busy) return
+        setBusy(true)
+        setError('')
+        try {
+            await props.onSubmit(values)
+            props.onClose()
+        } catch (e) {
+            setError(errorText(e))
+            setBusy(false)
+        }
+    }
+
+    return (
+        <Dialog title={props.title} width={440} busy={busy} onClose={props.onClose} actions={<>
+            <button className="left" onClick={() => setShow(!show)}>{show ? '隐藏' : '显示'}输入</button>
+            <button onClick={props.onClose} disabled={busy}>取消</button>
+            <button className="primary" onClick={submit} disabled={busy || !ready}>{busy && <Spinner/>}{props.confirm}</button>
+        </>}>
+            {props.requests.map((r, i) => (
+                <label key={r.server.id} className="cred">
+                    <span>{r.role && <b>{r.role} · </b>}{r.server.label}（{r.server.host}）的{r.need === 'password' ? ' root 密码' : '私钥口令'}</span>
+                    <input type={show ? 'text' : 'password'} value={values[i]} autoFocus={i === 0}
+                           onChange={e => setValues(v => v.map((old, j) => j === i ? e.target.value : old))}
+                           onKeyDown={e => e.key === 'Enter' && submit()}/>
+                </label>
+            ))}
+            {props.warning}
+            {error && <Banner kind="error">{error}</Banner>}
+            <p className="hint">只用于这一次操作，用完即从内存清除，不写入硬盘或日志。</p>
+        </Dialog>
+    )
+}
+
+// RateDialog changes one relay's bandwidth.
+export function RateDialog(props: {row: RelayRow, onClose: () => void, onSubmit: (mbps: number) => Promise<void>}) {
+    const [rate, setRate] = useState(String(props.row.rateMbps || 5))
+    const [busy, setBusy] = useState(false)
+    const [error, setError] = useState('')
+    const n = Number(rate)
+    const valid = Number.isInteger(n) && n >= 1 && n <= 10
+    const submit = async () => {
+        if (!valid || busy) return
+        setBusy(true)
+        try {
+            await props.onSubmit(n)
+            props.onClose()
+        } catch (e) {
+            setError(errorText(e))
+            setBusy(false)
+        }
+    }
+    return (
+        <Dialog title={`修改带宽 · 端口 ${props.row.port}`} width={360} busy={busy} onClose={props.onClose} actions={<>
+            <button onClick={props.onClose} disabled={busy}>取消</button>
+            <button className="primary" onClick={submit} disabled={busy || !valid}>{busy && <Spinner/>}保存</button>
+        </>}>
+            <div className="with">
+                <input value={rate} autoFocus style={{width: 70}} inputMode="numeric"
+                       onChange={e => setRate(e.target.value.replace(/\D/g, ''))} onKeyDown={e => e.key === 'Enter' && submit()}/>
+                <span className="muted">Mbps，上下行各，1–10</span>
+            </div>
+            <p className="hint">改带宽会重启这条中转，正在用它的连接可能会断开几秒。</p>
             {error && <Banner kind="error">{error}</Banner>}
         </Dialog>
     )

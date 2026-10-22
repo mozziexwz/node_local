@@ -1,9 +1,11 @@
 // Typed access to the Go backend. The generated Wails bindings return class
 // instances; they are used here as plain data with the shapes below.
 import * as Go from '../wailsjs/go/main/App'
-import {EventsOn} from '../wailsjs/runtime/runtime'
+import {ClipboardSetText, EventsOn} from '../wailsjs/runtime/runtime'
 
-export type TaskKind = 'deploy' | 'upgrade' | 'fetch' | 'status' | 'uninstall-preview' | 'uninstall'
+export type TaskKind =
+    'deploy' | 'upgrade' | 'fetch' | 'status' | 'uninstall-preview' | 'uninstall' |
+    'relay' | 'forward' | 'relay-list' | 'relay-manage' | 'relay-uninstall-preview' | 'relay-uninstall'
 export type TaskState = 'running' | 'succeeded' | 'failed' | 'cancelled'
 
 export interface Health {
@@ -30,6 +32,33 @@ export interface NodeState {
     checkedAt: number
 }
 
+export interface Hop {
+    fromHost: string
+    fromPort: number
+    toHost: string
+    toPort: number
+}
+
+export interface RelayRow {
+    id: string
+    role: string // relay, front or route
+    port: number
+    entry: string
+    rateMbps: number
+    target: string
+    state: string // running, paused or stopped
+    connections: number
+    createdAt: number
+    source: string // self, friend, front, website, code or unknown
+    remark: string
+}
+
+export interface Managed {
+    id: string
+    ok: boolean
+    error?: string
+}
+
 export interface Outcome {
     phase?: string
     errorCode?: string
@@ -40,17 +69,28 @@ export interface Outcome {
     configPath?: string
     items?: CleanupItem[]
     node?: NodeState
+    hops?: Hop[]
+    entry?: string
+    share?: string
+    relays?: RelayRow[]
+    managed?: Managed[]
 }
 
 export interface TaskEvent {
     id: string
     serverId: string
+    frontId?: string
     kind: TaskKind
     state: TaskState
     step: number // 1–10 while a deploy or upgrade runs
     started: number
     finished?: number
     outcome?: Outcome
+}
+
+export interface RelaySummary {
+    count: number
+    checkedAt: number
 }
 
 export interface Server {
@@ -68,6 +108,7 @@ export interface Server {
     configPath: string // "" when the file is gone
     inLauncher: boolean
     node: NodeState | null
+    relays: RelaySummary | null
 }
 
 export interface Proxy {
@@ -115,6 +156,31 @@ export interface ServerInput {
     algorithm: string
 }
 
+export interface TaskOptions {
+    configName?: string
+    frontId?: string
+    frontPassword?: string
+    frontPassphrase?: string
+    remark?: string
+    rateMbps?: number
+    target?: string
+    action?: string
+    items?: string[]
+}
+
+export interface ConfigItem {
+    name: string
+    entry: string
+}
+
+export interface FriendCheck {
+    entry: string
+    target: string
+    node: string
+    matches: 'yes' | 'no' | 'unknown'
+    reachable: 'reachable' | 'unreachable'
+}
+
 export interface Probe {
     fingerprint: string
     algorithm: string
@@ -156,14 +222,18 @@ export const api = {
         plain<Server>(await Go.ReplaceFingerprint(id, fingerprint, algorithm)),
     removeServer: (id: string) => Go.RemoveServer(id),
     pickKeyFile: () => Go.PickKeyFile(),
-    secretNeeded: async (id: string) => (await Go.SecretNeeded(id)) as SecretKind,
-    startTask: async (kind: TaskKind, id: string, password: string, passphrase: string) =>
-        plain<TaskEvent>(await Go.StartTask(kind, id, password, passphrase)),
+    secretNeeded: async (id: string, kind: TaskKind) => (await Go.SecretNeeded(id, kind)) as SecretKind,
+    startTask: async (kind: TaskKind, id: string, password: string, passphrase: string, opts: TaskOptions = {}) =>
+        plain<TaskEvent>(await Go.StartTask(kind, id, password, passphrase, opts as never)),
     confirmUninstall: async (previewId: string) => plain<TaskEvent>(await Go.ConfirmUninstall(previewId)),
     discardUninstall: (previewId: string) => Go.DiscardUninstall(previewId),
     cancelTask: (id: string) => Go.CancelTask(id),
     records: async () => plain<TaskRecord[] | null>(await Go.Records()) ?? [],
     clearRecords: () => Go.ClearRecords(),
+    configs: async () => plain<ConfigItem[] | null>(await Go.Configs()) ?? [],
+    forwardRequest: (configName: string) => Go.ForwardRequest(configName),
+    checkFriendEntry: async (configName: string, text: string) => plain<FriendCheck>(await Go.CheckFriendEntry(configName, text)),
+    saveFriendConfig: (configName: string, text: string, name: string) => Go.SaveFriendConfig(configName, text, name),
     saveProxy: (enabled: boolean, host: string, port: number) => Go.SaveProxy(enabled, host, port),
     pickLauncher: () => Go.PickLauncher(),
     forgetLauncher: () => Go.ForgetLauncher(),
@@ -172,6 +242,7 @@ export const api = {
     openLauncher: () => Go.OpenLauncher(),
     about: async () => plain<About>(await Go.About()),
     openURL: (url: string) => Go.OpenURL(url),
+    copy: (text: string) => ClipboardSetText(text),
 }
 
 export const on = {
@@ -206,6 +277,12 @@ export const kindLabels: Record<TaskKind, string> = {
     status: '刷新状态',
     'uninstall-preview': '读取卸载清单',
     uninstall: '卸载节点',
+    relay: '新建自备中转',
+    forward: '帮朋友建中转',
+    'relay-list': '读取中转列表',
+    'relay-manage': '管理中转',
+    'relay-uninstall-preview': '读取中转卸载清单',
+    'relay-uninstall': '卸载全部中转',
 }
 
 // What a running task shows in the server list.
@@ -216,6 +293,12 @@ export const busyLabels: Record<TaskKind, string> = {
     status: '检查中',
     'uninstall-preview': '读取中',
     uninstall: '卸载中',
+    relay: '建中转中',
+    forward: '建中转中',
+    'relay-list': '读取中',
+    'relay-manage': '处理中',
+    'relay-uninstall-preview': '读取中',
+    'relay-uninstall': '卸载中',
 }
 
 // itemKind names an uninstall item's kind.
@@ -229,4 +312,16 @@ export function keyType(algorithm: string): string {
     if (algorithm.startsWith('ecdsa')) return 'ECDSA'
     if (algorithm === 'ssh-rsa' || algorithm.startsWith('rsa')) return 'RSA'
     return algorithm
+}
+
+// busyEvent is the running task that uses a server, as its target or front.
+export function busyEvent(tasks: Record<string, TaskEvent>, serverId: string): TaskEvent | undefined {
+    const own = tasks[serverId]
+    if (own?.state === 'running') return own
+    return Object.values(tasks).find(t => t.state === 'running' && t.frontId === serverId)
+}
+
+// endpoints finds IP:port pairs in pasted text, like the Go side.
+export function endpoints(text: string): string[] {
+    return text.match(/\[[0-9A-Fa-f:.]+\]:\d{1,5}|(?:\d{1,3}\.){3}\d{1,3}:\d{1,5}/g) ?? []
 }

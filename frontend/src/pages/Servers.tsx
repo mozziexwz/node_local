@@ -1,5 +1,5 @@
 import {ReactNode, useEffect, useState} from 'react'
-import {api, busyLabels, errorText, itemKind, keyType, kindLabels, Overview, SecretKind, Server, stepLabels, TaskEvent, TaskKind} from '../api'
+import {api, busyEvent, busyLabels, errorText, itemKind, keyType, kindLabels, Overview, SecretKind, Server, stepLabels, TaskEvent, TaskKind} from '../api'
 import type {AskConfirm} from '../App'
 import {Banner, Card, Check, formatElapsed, formatTime, Spinner, useClock} from '../components'
 import {FingerprintDialog, SecretDialog, ServerDialog, UninstallDialog} from './dialogs'
@@ -10,6 +10,7 @@ type Props = {
     refresh: () => Promise<void>
     confirm: AskConfirm
     dismissTask: (serverId: string) => void
+    openRelays: (serverId: string) => void
 }
 
 // Kinds whose result gets its own card instead of a banner.
@@ -40,7 +41,7 @@ export function Servers(props: Props) {
     const start = async (sv: Server, kind: TaskKind) => {
         setError('')
         try {
-            const need = await api.secretNeeded(sv.id)
+            const need = await api.secretNeeded(sv.id, kind)
             if (need !== '') {
                 setSecret({server: sv, kind, need})
                 return
@@ -94,9 +95,12 @@ export function Servers(props: Props) {
                         }}
                         importToLauncher={() => importToLauncher(server)} rekey={() => setRekey(server)}/>
     } else {
-        panel = <Detail server={server} task={task} onStart={kind => start(server, kind)} onEdit={() => setEditing(server)}
-                        onRemove={() => remove(server)} importToLauncher={() => importToLauncher(server)}
-                        dismiss={() => props.dismissTask(server.id)} rekey={() => setRekey(server)}/>
+        panel = <>
+            <Detail server={server} task={task} busy={busyEvent(props.tasks, server.id)} onStart={kind => start(server, kind)}
+                    onEdit={() => setEditing(server)} onRemove={() => remove(server)} importToLauncher={() => importToLauncher(server)}
+                    dismiss={() => props.dismissTask(server.id)} rekey={() => setRekey(server)}/>
+            <RelayCard server={server} open={() => props.openRelays(server.id)}/>
+        </>
     }
 
     const preview = task && task.kind === 'uninstall-preview' && task.state === 'succeeded' && (task.outcome?.items?.length ?? 0) > 0
@@ -109,7 +113,7 @@ export function Servers(props: Props) {
                     <ul className="server-list">
                         {list.map(sv => (
                             <li key={sv.id} className={sv.id === selected ? 'sel' : ''} onClick={() => setSelected(sv.id)}>
-                                <div className="top"><span className="name">{sv.label}</span><ServerTag server={sv} task={props.tasks[sv.id]}/></div>
+                                <div className="top"><span className="name">{sv.label}</span><ServerTag server={sv} busy={busyEvent(props.tasks, sv.id)}/></div>
                                 <span className="addr">{sv.host}{sv.port !== 22 && `:${sv.port}`}</span>
                             </li>
                         ))}
@@ -139,10 +143,12 @@ export function Servers(props: Props) {
     )
 }
 
-function ServerTag(props: {server: Server, task?: TaskEvent}) {
-    const {server, task} = props
-    if (task?.state === 'running') return <span className="tag busy"><Spinner/>{busyLabels[task.kind]}</span>
+function ServerTag(props: {server: Server, busy?: TaskEvent}) {
+    const {server, busy} = props
+    if (busy) return <span className="tag busy"><Spinner/>{busy.frontId === server.id ? '建前置中' : busyLabels[busy.kind]}</span>
     const node = server.node
+    const relays = server.relays?.count ?? 0
+    if (!node?.installed && relays > 0) return <span className="tag">中转 {relays} 条</span>
     if (!node) return <span className="tag">未检查</span>
     if (!node.installed) return <span className="tag">未部署</span>
     if (node.service === 'stopped') return <span className="tag warn"><span className="dot"/>节点已停止</span>
@@ -193,6 +199,7 @@ function NodeLine(props: {server: Server}) {
 function Detail(props: {
     server: Server
     task?: TaskEvent
+    busy?: TaskEvent
     onStart: (kind: TaskKind) => void
     onEdit: () => void
     onRemove: () => void
@@ -201,7 +208,7 @@ function Detail(props: {
     rekey: () => void
 }) {
     const {server, task} = props
-    const busy = task?.state === 'running'
+    const busy = !!props.busy
     const installed = !!server.node?.installed
     const failed = task && !busy && task.state !== 'succeeded'
     const empty = task?.kind === 'uninstall-preview' && task.state === 'succeeded' && !(task.outcome?.items?.length)
@@ -365,6 +372,20 @@ function Result(props: {
                 {!ok && <button onClick={props.retry}>重试</button>}
                 <button className="primary" style={{marginLeft: 'auto'}} onClick={props.done}>完成</button>
             </div>
+        </Card>
+    )
+}
+
+// RelayCard says how many relays the server carries and leads to the relay page.
+function RelayCard(props: {server: Server, open: () => void}) {
+    const r = props.server.relays
+    return (
+        <Card title="这台服务器上的中转" actions={<button className="small" onClick={props.open}>在「中转」页管理</button>}>
+            <p className="muted small">
+                {!r ? '还没检查，「刷新状态」后显示。'
+                    : r.count === 0 ? '没有中转。在「中转」页可以用它做中转服务器。'
+                        : `${r.count} 条（${formatTime(r.checkedAt)} 检查）`}
+            </p>
         </Card>
     )
 }

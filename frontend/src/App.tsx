@@ -1,14 +1,18 @@
 import {ReactNode, useCallback, useEffect, useRef, useState} from 'react'
 import {api, errorText, kindLabels, on, Overview, TaskEvent} from './api'
 import {Banner, Confirm, ConfirmRequest, formatClock, Spinner, useClock} from './components'
+import {Friends} from './pages/Friends'
 import {Records} from './pages/Records'
+import {Relays} from './pages/Relays'
 import {Servers} from './pages/Servers'
 import {Settings} from './pages/Settings'
 
-type Page = 'servers' | 'records' | 'settings'
+type Page = 'servers' | 'relays' | 'friends' | 'records' | 'settings'
 
 const pages: {id: Page, label: string}[] = [
     {id: 'servers', label: '服务器'},
+    {id: 'relays', label: '中转'},
+    {id: 'friends', label: '朋友中转'},
     {id: 'records', label: '任务记录'},
     {id: 'settings', label: '设置与关于'},
 ]
@@ -50,6 +54,8 @@ function StatusBar(props: {overview: Overview | null, tasks: Record<string, Task
 
 export default function App() {
     const [page, setPage] = useState<Page>('servers')
+    // The server the 中转 page opens with, when another page sent us there.
+    const [relayFocus, setRelayFocus] = useState('')
     const [overview, setOverview] = useState<Overview | null>(null)
     const [loadError, setLoadError] = useState('')
     // The latest event per server; finished ones stay until dismissed.
@@ -112,8 +118,9 @@ export default function App() {
         return next
     }), [])
 
-    const go = (p: Page) => {
+    const go = (p: Page, focus = '') => {
         setPage(p)
+        setRelayFocus(focus)
         refresh()
     }
 
@@ -121,7 +128,14 @@ export default function App() {
     if (overview) {
         switch (page) {
             case 'servers':
-                content = <Servers overview={overview} tasks={tasks} refresh={refresh} confirm={confirm} dismissTask={dismissTask}/>
+                content = <Servers overview={overview} tasks={tasks} refresh={refresh} confirm={confirm} dismissTask={dismissTask}
+                                   openRelays={id => go('relays', id)}/>
+                break
+            case 'relays':
+                content = <Relays overview={overview} tasks={tasks} confirm={confirm} focus={relayFocus} dismissTask={dismissTask}/>
+                break
+            case 'friends':
+                content = <Friends overview={overview} tasks={tasks} dismissTask={dismissTask}/>
                 break
             case 'records':
                 content = <Records overview={overview} confirm={confirm}/>

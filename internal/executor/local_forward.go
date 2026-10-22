@@ -45,7 +45,7 @@ func (e *Engine) ForwardRelay(ctx context.Context, job Job, target string, targe
 	}
 	r.Hops = []Hop{{FromHost: s.Host, FromPort: port, ToHost: host, ToPort: targetPort}}
 	r.State, r.Phase = "succeeded", "complete"
-	r.Message = "转发已建好；每端口上下行各 " + strconv.Itoa(rate) + " Mbps，游戏连接尚未验证"
+	r.Message = "中转已建好；每端口上下行各 " + strconv.Itoa(rate) + " Mbps，游戏连接尚未验证"
 	r.Health = &Health{Service: "running", LocalSelfTest: "target_tcp_reachable", PublicTCP: e.TCPProbe(ctx, s.Host, port), Game: "not_tested", BBR: bbr}
 	return r
 }

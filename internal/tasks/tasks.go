@@ -52,7 +52,7 @@ const (
 var kindLabels = map[Kind]string{
 	Deploy: "部署节点", Upgrade: "升级节点", Fetch: "取回配置", Status: "刷新状态",
 	UninstallPreview: "读取卸载清单", Uninstall: "卸载节点",
-	Relay: "新建自备中转", Forward: "朋友转发", RelayList: "读取中转列表", RelayManage: "管理中转",
+	Relay: "新建自备中转", Forward: "帮朋友建中转", RelayList: "读取中转列表", RelayManage: "管理中转",
 	RelayUninstallPreview: "读取中转卸载清单", RelayUninstall: "卸载全部中转",
 }
 
@@ -676,8 +676,14 @@ func (r *Runner) run(ctx context.Context, j *job, p *plan) {
 		}
 		r.pending[ev.ID] = pendingUninstall{serverID: sv.ID, scope: scope, previewID: ev.ID, digest: digest, secret: p.secret, expires: r.now().Add(confirmWindow)}
 	}
-	if kind.usesSession() && state == "succeeded" {
-		r.sessions[sv.ID] = session{secret: p.secret, expires: r.now().Add(sessionWindow)}
+	if kind.usesSession() {
+		switch {
+		case state == "succeeded":
+			r.sessions[sv.ID] = session{secret: p.secret, expires: r.now().Add(sessionWindow)}
+		case out.ErrorCode == "ssh_auth":
+			// The remembered secret no longer logs in: ask again next time.
+			delete(r.sessions, sv.ID)
+		}
 	}
 	if kind.recorded() {
 		r.records = append([]Record{{ID: ev.ID, ServerID: sv.ID, Server: sv.Label(), Address: sv.Address(), Fingerprint: sv.Fingerprint,

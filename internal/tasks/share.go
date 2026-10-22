@@ -15,7 +15,7 @@ import (
 // purpose: they hold addresses only, never credentials.
 
 const (
-	requestPrefix = "MSBOOST 转发请求 "
+	requestPrefix = "MSBOOST 中转请求 "
 	entryPrefix   = "MSBOOST 中转入口 "
 )
 
@@ -113,7 +113,7 @@ func FriendConfig(config []byte, text, name string) ([]byte, error) {
 		return nil, err
 	}
 	if c.Matches == "no" {
-		return nil, errors.New("朋友发回的入口转发到 " + c.Target + "，不是这份配置的节点 " + c.Node + "；请确认选对了配置，或让朋友重新发送")
+		return nil, errors.New("朋友发回的中转目标是 " + c.Target + "，不是这份配置的节点 " + c.Node + "；请确认选对了配置，或让朋友重新发送")
 	}
 	host, port, _ := net.SplitHostPort(c.Entry)
 	n, _ := strconv.Atoi(port)

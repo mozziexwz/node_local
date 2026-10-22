@@ -481,6 +481,19 @@ func TestFriendRelayListManageAndUninstall(t *testing.T) {
 	if sv, _ := h.list.Get(h.relay.ID); sv.Relays.Count != 1 {
 		t.Fatalf("relay count after delete %+v", sv.Relays)
 	}
+	// A password changed on the server ends the session.
+	h.fake.fail = executor.PublicDiagnostic("ssh_auth", "")
+	if ev, err = h.runner.Start(RelayManage, h.relay.ID, Secret{}, Options{Action: "pause", Items: []string{"webr"}}); err != nil {
+		t.Fatal(err)
+	}
+	if failed, _ := h.wait(ev.ID); failed.State != "failed" || failed.Outcome.ErrorCode != "ssh_auth" {
+		t.Fatalf("manage with a stale password %+v", failed.Outcome)
+	}
+	h.fake.fail = nil
+	if need, _ := h.runner.SecretNeeded(h.relay.ID, RelayManage); need != "password" {
+		t.Fatalf("a session whose password failed is still used: %q", need)
+	}
+	h.wait(h.start(RelayList, h.relay, Options{}).ID)
 	h.runner.ForgetSession(h.relay.ID)
 	if need, _ := h.runner.SecretNeeded(h.relay.ID, RelayManage); need != "password" {
 		t.Fatalf("forgotten session still used: %q", need)

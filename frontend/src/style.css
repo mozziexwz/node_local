@@ -985,3 +985,177 @@ table.components tr:last-child td {
     flex-wrap: wrap;
     gap: 4px 14px;
 }
+
+/* ---- relays and friend relays ---- */
+
+.mono {
+    font-family: Consolas, "Cascadia Mono", "Microsoft YaHei UI", monospace;
+    font-size: 12px;
+    overflow-wrap: anywhere;
+    user-select: text;
+}
+
+.nowrap {
+    white-space: nowrap;
+}
+
+.warn-text {
+    color: var(--amber);
+}
+
+.relay-form {
+    display: grid;
+    grid-template-columns: 72px minmax(0, 1fr) 72px minmax(0, 1fr);
+    gap: 8px 12px;
+    align-items: center;
+}
+
+.relay-form > label {
+    color: var(--sub);
+}
+
+.relay-form select, .relay-form input {
+    width: 100%;
+}
+
+.relay-form .rate {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.relay-form .rate input {
+    width: 64px;
+}
+
+.relay-form .wide {
+    grid-column: span 2;
+}
+
+.grow-table {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+}
+
+table.list.relays tbody tr {
+    cursor: default;
+}
+
+table.list.relays td:nth-child(2) {
+    max-width: 170px;
+}
+
+table.list.relays td:nth-child(6) {
+    max-width: 130px;
+}
+
+table.list td.actions {
+    text-align: right;
+}
+
+table.list td.actions button + button {
+    margin-left: 4px;
+}
+
+.friend-top {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.flow {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.flow li {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    border-radius: 8px;
+    background: var(--soft);
+    color: var(--sub);
+    font-size: 12px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.flow li b, .num {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--orange);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.flow li b {
+    background: #cfc9c1;
+}
+
+.flow li.mine {
+    background: var(--pale);
+    color: var(--orange-dark);
+    font-weight: 600;
+}
+
+.flow li.mine b {
+    background: var(--orange);
+}
+
+.card-head h2 .num {
+    margin-right: 7px;
+    vertical-align: 1px;
+}
+
+.form-grid.wide {
+    grid-template-columns: 84px minmax(0, 1fr);
+}
+
+.share-out {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 32px;
+    padding: 4px 6px 4px 10px;
+    border: 1px dashed #e3b99f;
+    border-radius: 8px;
+    background: #fffaf6;
+}
+
+.checks {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 16px;
+    min-height: 18px;
+    font-size: 12px;
+}
+
+.cred {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cred > span {
+    color: var(--sub);
+    font-size: 12px;
+}
+
+.cred b {
+    color: var(--ink);
+    font-weight: 600;
+}

@@ -155,6 +155,8 @@ func (a *App) UpdateServer(id string, in ServerInput) (ServerDTO, error) {
 	if err != nil {
 		return ServerDTO{}, err
 	}
+	// The login may have changed, so a remembered secret may no longer fit.
+	a.runner.ForgetSession(id)
 	return a.serverDTO(sv), nil
 }
 
@@ -170,6 +172,7 @@ func (a *App) ReplaceFingerprint(id, fingerprint, algorithm string) (ServerDTO, 
 	if err != nil {
 		return ServerDTO{}, err
 	}
+	a.runner.ForgetSession(id)
 	a.log.Printf(logx.App, "已替换 %s 的服务器指纹：%s → %s", sv.Label(), old, fingerprint)
 	return a.serverDTO(sv), nil
 }
@@ -229,9 +232,6 @@ func (a *App) StartTask(kind, serverID, password, passphrase string, opts TaskOp
 	}
 	return a.runner.Start(tasks.Kind(kind), serverID, tasks.Secret{Password: password, Passphrase: passphrase}, o)
 }
-
-// ForgetRelaySession drops the secret kept for managing a server's relays.
-func (a *App) ForgetRelaySession(serverID string) { a.runner.ForgetSession(serverID) }
 
 // ---- configurations and friend relays ----
 

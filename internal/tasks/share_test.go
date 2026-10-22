@@ -8,11 +8,11 @@ import (
 )
 
 func TestShareTexts(t *testing.T) {
-	if got := ShareRequest("203.0.113.10:34917"); got != "MSBOOST 转发请求 203.0.113.10:34917" {
+	if got := ShareRequest("203.0.113.10:34917"); got != "MSBOOST 中转请求 203.0.113.10:34917" {
 		t.Fatal(got)
 	}
 	for text, want := range map[string]string{
-		"MSBOOST 转发请求 203.0.113.10:34917": "203.0.113.10:34917",
+		"MSBOOST 中转请求 203.0.113.10:34917": "203.0.113.10:34917",
 		"  203.0.113.10:34917 ":           "203.0.113.10:34917",
 		"节点在 [2001:db8::1]:443，帮我转一下":     "[2001:db8::1]:443",
 	} {
