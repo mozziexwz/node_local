@@ -120,6 +120,7 @@ type AboutDTO struct {
 	Version      string         `json:"version"`
 	Copyright    string         `json:"copyright"`
 	License      string         `json:"license"`
+	Source       string         `json:"source"`  // where a release's source is offered; "" for test builds
 	Scripts      string         `json:"scripts"` // where the bundled installer comes from
 	Components   []ComponentDTO `json:"components"`
 	ServerSide   []ComponentDTO `json:"serverSide"` // installed on servers, not shipped
