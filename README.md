@@ -2,7 +2,7 @@
 
 在自己的电脑上用 SSH 直接部署和管理 MSBOOST 节点与自备中转。SSH 密码或私钥只在本机内存里使用，不经过网站，也不保存到硬盘。
 
-> **状态：M2（自备中转、朋友中转与中转管理）已通过实机测试，尚未发布。** 规划见 [docs/MSBOOST本地版开发规划.md](docs/MSBOOST本地版开发规划.md)，各阶段测试说明在 [docs/m0](docs/m0/README.md)、[docs/m1](docs/m1/README.md)、[docs/m2](docs/m2/README.md)。
+> **状态：M0–M2 已完成，M3（打包与发布）进行中，尚未发布。** 规划见 [docs/MSBOOST本地版开发规划.md](docs/MSBOOST本地版开发规划.md)，各阶段说明在 [docs/m0](docs/m0/README.md)、[docs/m1](docs/m1/README.md)、[docs/m2](docs/m2/README.md)、[docs/m3](docs/m3/README.md)。
 
 ## 能做什么
 
@@ -13,6 +13,16 @@
 - 卸载清理。
 
 中转码、捐赠权益线路、枫叶、工单等需要网站账户的功能，请继续使用网站。
+
+## 下载
+
+正式版发布后，在 MSBOOST 网站的「MSBOOST 本地版」页下载。本仓库的 Releases 里有同样的三个文件：
+
+- 程序 `MSBOOST-Local-<版本>-win-x64.zip`
+- 同版本源代码 `MSBOOST-Local-<版本>-source.zip`
+- `SHA256SUMS.txt`
+
+程序解压到 MSBOOST 启动器所在的文件夹即可使用，不需要管理员权限。
 
 ## 与网站的关系
 
@@ -38,7 +48,9 @@ internal/logx/           日志（密码打码）
 installers/              内嵌的节点安装脚本与 GOST 固定版本（同步自网站）
 cmd/msboost-local-cli/   测试用命令行：指纹、部署、取回配置、卸载清理（不随正式版发布）
 scripts/syncnode/        从网站仓库同步引擎和脚本
-docs/                    规划、界面样稿与各阶段测试说明
+scripts/notices/         生成发布包里的 THIRD_PARTY_NOTICES.txt
+build/package/           发布包里的 README.txt 模板
+docs/                    规划、界面样稿、各阶段说明与发布说明（releases/）
 ```
 
 ## 开发环境
@@ -52,6 +64,8 @@ go test ./...
 ```
 
 构建界面：安装 Wails CLI v2.16.0（`go install github.com/wailsapp/wails/v2/cmd/wails@v2.16.0`），在仓库根目录执行 `wails build`，产物为 `build/bin/MSBOOST-Local.exe`。程序是便携的：`configs\` 和 `local\` 都在 exe 旁边，不需要管理员权限。
+
+发布包由 CI 生成：每次构建都产出 `MSBOOST-Local-<版本>-win-x64`；推送 `v*` 标签时再生成草稿 Release，附带程序 zip、同版本源代码和 `SHA256SUMS.txt`，确认后手动发布（见 [docs/m3](docs/m3/README.md)）。
 
 ## 许可
 
