@@ -7,8 +7,12 @@ type Ask = {
     requests: CredentialRequest[]
     confirm: string
     warning?: ReactNode
+    remembered: boolean
     run: (values: string[]) => Promise<void>
 }
+
+// The kinds whose secret the backend keeps for relay management.
+const sessionKinds: TaskKind[] = ['relay-list', 'relay-manage', 'relay-uninstall-preview']
 
 async function request(sv: Server, kind: TaskKind, role?: string): Promise<CredentialRequest | null> {
     const need = await api.secretNeeded(sv.id, kind)
@@ -39,7 +43,7 @@ export function useLaunch(onError: (text: string) => void) {
             if (requests.length === 0) {
                 await start([])
             } else {
-                setAsk({title: kindLabels[kind], requests, confirm, warning, run: start})
+                setAsk({title: kindLabels[kind], requests, confirm, warning, remembered: sessionKinds.includes(kind), run: start})
             }
         } catch (e) {
             onError(e instanceof Error ? e.message : String(e))
@@ -48,7 +52,7 @@ export function useLaunch(onError: (text: string) => void) {
 
     const dialog = ask && (
         <CredentialsDialog title={ask.title} requests={ask.requests} confirm={ask.confirm} warning={ask.warning}
-                           onClose={() => setAsk(null)} onSubmit={ask.run}/>
+                           remembered={ask.remembered} onClose={() => setAsk(null)} onSubmit={ask.run}/>
     )
     return {launch, dialog}
 }

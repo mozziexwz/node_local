@@ -256,6 +256,7 @@ export function CredentialsDialog(props: {
     requests: CredentialRequest[]
     confirm: string
     warning?: ReactNode
+    remembered?: boolean // kept for relay management, see tasks.sessionWindow
     onClose: () => void
     onSubmit: (values: string[]) => Promise<void>
 }) {
@@ -294,7 +295,9 @@ export function CredentialsDialog(props: {
             ))}
             {props.warning}
             {error && <Banner kind="error">{error}</Banner>}
-            <p className="hint">只用于这一次操作，用完即从内存清除，不写入硬盘或日志。</p>
+            <p className="hint">{props.remembered
+                ? '只保存在内存里，10 分钟内管理这台服务器的中转不用再输；不写入硬盘或日志，关闭程序即清除。'
+                : '只用于这一次操作，用完即从内存清除，不写入硬盘或日志。'}</p>
         </Dialog>
     )
 }
