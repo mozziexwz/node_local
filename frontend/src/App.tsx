@@ -52,8 +52,34 @@ function StatusBar(props: {overview: Overview | null, tasks: Record<string, Task
     )
 }
 
+// LauncherHint shows when the launcher is neither beside this program nor
+// chosen in the settings: the configurations made here would not show up in
+// the launcher.
+function LauncherHint(props: {onPicked: () => void, onClose: () => void}) {
+    const [error, setError] = useState('')
+    const pick = async () => {
+        setError('')
+        try {
+            if (await api.pickLauncher()) props.onPicked()
+        } catch (e) {
+            setError(errorText(e))
+        }
+    }
+    return <>
+        <Banner kind="warn" onClose={props.onClose}>
+            {'没有在本程序所在的文件夹找到 MSBOOST 启动器，生成的配置会存在本程序旁边的 configs 文件夹，启动器里看不到。' +
+                '建议把本程序放进启动器所在的文件夹（和 '}
+            <span className="nowrap">MSBOOST-Launcher.exe</span>
+            {' 放在一起）后重新打开，或者'}
+            <button className="link" onClick={pick}>指定启动器位置…</button>
+        </Banner>
+        {error && <Banner kind="error" onClose={() => setError('')}>{error}</Banner>}
+    </>
+}
+
 export default function App() {
     const [page, setPage] = useState<Page>('servers')
+    const [launcherHint, setLauncherHint] = useState(true)
     // The server the 中转 page opens with, when another page sent us there.
     const [relayFocus, setRelayFocus] = useState('')
     const [overview, setOverview] = useState<Overview | null>(null)
@@ -163,6 +189,7 @@ export default function App() {
 
             <main className="content">
                 {(overview?.warnings ?? []).map(w => <Banner key={w} kind="warn">{w}</Banner>)}
+                {overview && !overview.launcher && launcherHint && <LauncherHint onPicked={refresh} onClose={() => setLauncherHint(false)}/>}
                 {loadError && <Banner kind="error">无法读取程序状态：{loadError}</Banner>}
                 {overview ? content : !loadError && <div className="loading"><Spinner/>正在加载…</div>}
             </main>
