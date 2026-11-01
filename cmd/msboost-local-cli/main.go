@@ -211,7 +211,7 @@ func report(r executor.Result) {
 	}
 	if h := r.Health; h != nil {
 		var parts []string
-		for _, f := range [][2]string{{"服务", h.Service}, {"本地自测", h.LocalSelfTest}, {"公网 TCP", h.PublicTCP}, {"BBR", h.BBR}} {
+		for _, f := range [][2]string{{"服务", h.Service}, {"本地自测", h.LocalSelfTest}, {"公网 TCP", h.PublicTCP}, {"公网 UDP", h.PublicUDP}, {"BBR", h.BBR}} {
 			if f[1] != "" {
 				parts = append(parts, f[0]+"："+f[1])
 			}
