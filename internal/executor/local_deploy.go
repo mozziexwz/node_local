@@ -131,11 +131,12 @@ func (e *Engine) UpgradeWithProgress(ctx context.Context, job Job, progress func
 	}
 	r.State = "succeeded"
 	r.Phase = "complete"
-	// The existing file keeps working either way; a node that now serves UDP
-	// only offers it through the new file.
+	// The existing file keeps working either way. The new one replaces it
+	// where the launcher reads it; with UDP it needs launcher v1.2.0, as older
+	// launchers mix TCP and UDP.
 	r.Message = "节点已升级，入口和认证没变，原配置继续可用；公网 TCP 和 UDP 单独检查，游戏连通性尚未验证"
 	if info.UDP && !old.UDP {
-		r.Message = "节点已升级并开启了 UDP，入口和认证没变；要用 UDP 需重新导入新配置。公网 TCP 和 UDP 单独检查，游戏连通性尚未验证"
+		r.Message = "节点已升级并开启了 UDP，入口和认证没变；新配置同时支持 TCP 和 UDP，启动器要 v1.2.0 或更新版本。公网 TCP 和 UDP 单独检查，游戏连通性尚未验证"
 	}
 	r.Config = data
 	r.Health = &Health{Service: "running", LocalSelfTest: "passed", PublicTCP: e.TCPProbe(ctx, info.TargetHost, info.TargetPort), PublicUDP: e.UDPProbe(ctx, data), Game: "not_tested", BBR: marker(out, "MSBOOST_BBR")}
