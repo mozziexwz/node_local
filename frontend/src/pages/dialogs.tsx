@@ -83,7 +83,7 @@ export function ServerDialog(props: {server?: Server, onClose: () => void, onSav
                     <span className="hint">登录用户固定为 root</span>
                 </div>
                 <label htmlFor="sv-name">备注</label>
-                <input id="sv-name" value={name} maxLength={30} placeholder="可不填，例如“东京节点”" onChange={e => setName(e.target.value)}/>
+                <input id="sv-name" value={name} maxLength={30} placeholder="可不填，例如“洛杉矶节点”" onChange={e => setName(e.target.value)}/>
                 <label>登录方式</label>
                 <div className="with">
                     <span className="segmented">

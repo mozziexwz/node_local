@@ -19,6 +19,7 @@ export namespace executor {
 	    service: string;
 	    localSelfTest: string;
 	    publicTCP: string;
+	    publicUDP?: string;
 	    game: string;
 	
 	    static createFrom(source: any = {}) {
@@ -31,6 +32,7 @@ export namespace executor {
 	        this.service = source["service"];
 	        this.localSelfTest = source["localSelfTest"];
 	        this.publicTCP = source["publicTCP"];
+	        this.publicUDP = source["publicUDP"];
 	        this.game = source["game"];
 	    }
 	}
@@ -39,6 +41,7 @@ export namespace executor {
 	    fromPort: number;
 	    toHost: string;
 	    toPort: number;
+	    udp?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Hop(source);
@@ -50,6 +53,7 @@ export namespace executor {
 	        this.fromPort = source["fromPort"];
 	        this.toHost = source["toHost"];
 	        this.toPort = source["toPort"];
+	        this.udp = source["udp"];
 	    }
 	}
 	export class RelayManageResult {

@@ -355,6 +355,15 @@ function Result(props: {
                     {h.publicTCP === 'reachable'
                         ? <dd className="ok">可达 {port && <span className="muted">（TCP {port}）</span>}</dd>
                         : <dd className="bad">不可达 <span className="muted">检查服务商安全组是否放行{port ? ` TCP ${port}` : '这个端口'}</span></dd>}
+                    {h.publicUDP === 'off' && <><dt>UDP</dt><dd><span className="muted">节点没开 UDP，启动器里只能用 TCP</span></dd></>}
+                    {(h.publicUDP === 'not_tested' || h.publicUDP === 'reachable' || h.publicUDP === 'unreachable') && <>
+                        <dt>UDP</dt>
+                        {h.publicUDP === 'reachable'
+                            ? <dd className="ok">可达 {port && <span className="muted">（UDP {port}）</span>}</dd>
+                            : h.publicUDP === 'unreachable'
+                                ? <dd className="bad">不可达 <span className="muted">检查服务商安全组是否放行{port ? ` UDP ${port}` : '同一端口的 UDP'}</span></dd>
+                                : <dd>已开启 <span className="muted">本程序查不了 UDP：服务商安全组也要放行{port ? ` UDP ${port}` : '同一端口的 UDP'}，再在启动器选 UDP 做「网络检测」</span></dd>}
+                    </>}
                     {h.bbr && <><dt>BBR</dt><dd>{(bbrLabels[h.bbr] ?? h.bbr).replace('BBR ', '')}</dd></>}
                     <dt>游戏连接</dt>
                     <dd><span className="muted">还没测：在启动器选中这份配置，看「网络检测」</span></dd>

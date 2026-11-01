@@ -38,7 +38,9 @@ func (e *Engine) ForwardRelay(ctx context.Context, job Job, target string, targe
 	if checked, ok := e.preflightDebian(ctx, s, r); !ok {
 		return checked
 	}
-	port, bbr, err := e.installRelay(ctx, s, host, targetPort, job.ID+"r", RelayRateBytes(rate), nil, rate)
+	// TCP only: a friend shares just the node's address, which says nothing
+	// about UDP, and the share text has no way to offer UDP back.
+	port, _, bbr, err := e.installRelay(ctx, s, host, targetPort, job.ID+"r", RelayRateBytes(rate), nil, rate, false)
 	r.Health = &Health{BBR: bbr}
 	if err != nil {
 		return failRemote(r, "relay", nil, err)

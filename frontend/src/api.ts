@@ -13,6 +13,9 @@ export interface Health {
     service: string
     localSelfTest: string
     publicTCP: string
+    // reachable, unreachable, off (no UDP binding) or not_tested; this Windows
+    // program cannot run the check, so a configuration with UDP is not_tested
+    publicUDP?: string
     game: string
 }
 
