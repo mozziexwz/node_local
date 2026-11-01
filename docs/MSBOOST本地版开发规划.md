@@ -51,7 +51,7 @@ Go 1.27.1 + Wails v2.16.0 + React 19，与启动器同一套工具链；Windows 
 
 - 网站的执行机代码在 `internal/` 下，别的模块不能 import；网站模块路径 `github.com/mozziexwz/node` 配 v2.x 标签也不符合 Go 的版本规则。所以复制。
 - `go run ./scripts/syncnode -tag <网站标签> [-source ..\MSBOOST.DE]` 从网站仓库的固定标签取文件（`git cat-file`，字节不变）：
-  - `internal/executor` 的源码和测试，不含 `client.go`（轮询网站）、`sftp_ownership.go`（网站备份用）和 `unattended_test.go`（DD 测试，需要 reinstall 脚本）。依赖只剩 x/crypto/ssh。
+  - `internal/executor` 的源码和测试，不含 `client.go`（轮询网站）、`sftp_ownership.go`（网站备份用）、`unattended_test.go`（DD 测试，需要 reinstall 脚本）和 `node_upgrade_test.go`（检查的是网站的文案，本地版的升级和取回配置有自己的测试）。依赖只剩 x/crypto/ssh。
   - `installers/node/msboost.sh`，与网站同一路径，引擎测试按这个相对路径读取它。
   - `installers/gost.json`：从网站 `deploy/install-agent.sh` 提取的 GOST 下载地址和 sha256（v2.10.0 之前取自 `deploy/agent-executor.env.example`，网站后来删掉了这个文件）。
   - 来源标签、提交号和每个文件的 sha256 写进根目录 `UPSTREAM.json`。
