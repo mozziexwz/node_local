@@ -13,8 +13,9 @@ import (
 // website and this program list, manage and clean it up alike.
 
 // ForwardRelay installs a managed relay on job.Request.SSH that forwards to
-// target:targetPort, at job.Request.RateMbps (0 means the default).
-func (e *Engine) ForwardRelay(ctx context.Context, job Job, target string, targetPort int) Result {
+// target:targetPort, at job.Request.RateMbps (0 means the default). udp says
+// the friend's node also serves UDP, as the friend's request text tells.
+func (e *Engine) ForwardRelay(ctx context.Context, job Job, target string, targetPort int, udp bool) Result {
 	r := Result{ID: job.ID, Lease: job.Lease}
 	e.localDefaults()
 	s := job.Request.SSH
@@ -38,16 +39,34 @@ func (e *Engine) ForwardRelay(ctx context.Context, job Job, target string, targe
 	if checked, ok := e.preflightDebian(ctx, s, r); !ok {
 		return checked
 	}
-	// TCP only: a friend shares just the node's address, which says nothing
-	// about UDP, and the share text has no way to offer UDP back.
-	port, _, bbr, err := e.installRelay(ctx, s, host, targetPort, job.ID+"r", RelayRateBytes(rate), nil, rate, false)
+	// UDP as on the website's relays: for a node that serves it, on a port
+	// from 1024, once the target's UDP port has stayed silent (see
+	// checkUDPTarget).
+	asked := RelayUDP(udp, targetPort)
+	udp, why := asked, ""
+	if udp {
+		if verdict := e.checkUDPTarget(ctx, s, host, targetPort); verdict != "silent" {
+			udp, why = false, udpTargetReasons[verdict]
+		}
+	}
+	port, udp, bbr, err := e.installRelay(ctx, s, host, targetPort, job.ID+"r", RelayRateBytes(rate), nil, rate, udp)
 	r.Health = &Health{BBR: bbr}
 	if err != nil {
 		return failRemote(r, "relay", nil, err)
 	}
-	r.Hops = []Hop{{FromHost: s.Host, FromPort: port, ToHost: host, ToPort: targetPort}}
+	r.Hops = []Hop{{FromHost: s.Host, FromPort: port, ToHost: host, ToPort: targetPort, UDP: udp}}
 	r.State, r.Phase = "succeeded", "complete"
-	r.Message = "中转已建好；每端口上下行各 " + strconv.Itoa(rate) + " Mbps，游戏连接尚未验证"
+	if asked && !udp && why == "" {
+		why = "中转服务器没能开 UDP"
+	}
+	r.Message = "中转已建好；"
+	switch {
+	case udp:
+		r.Message = "中转已建好，TCP 和 UDP 都能用；"
+	case why != "":
+		r.Message = "中转已建好，只走 TCP：" + why + "。"
+	}
+	r.Message += "每端口上下行各 " + strconv.Itoa(rate) + " Mbps，游戏连接尚未验证"
 	r.Health = &Health{Service: "running", LocalSelfTest: "target_tcp_reachable", PublicTCP: e.TCPProbe(ctx, s.Host, port), Game: "not_tested", BBR: bbr}
 	return r
 }

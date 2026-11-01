@@ -75,6 +75,7 @@ type TaskOptions struct {
 	Remark          string   `json:"remark"`
 	RateMbps        int      `json:"rateMbps"`
 	Target          string   `json:"target"`
+	UDP             bool     `json:"udp"`
 	Action          string   `json:"action"`
 	Items           []string `json:"items"`
 }
@@ -92,6 +93,8 @@ type FriendCheckDTO struct {
 	Node      string `json:"node"`
 	Matches   string `json:"matches"`   // yes, no or unknown
 	Reachable string `json:"reachable"` // from this computer
+	NodeUDP   bool   `json:"nodeUdp"`   // the configuration has UDP
+	UDP       bool   `json:"udp"`       // the new configuration has UDP too
 }
 
 // ProbeDTO is a server's host key.

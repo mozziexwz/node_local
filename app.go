@@ -222,7 +222,7 @@ func (a *App) SecretNeeded(serverID, kind string) (string, error) {
 // StartTask begins an operation; see tasks.Kind.
 func (a *App) StartTask(kind, serverID, password, passphrase string, opts TaskOptions) (tasks.Event, error) {
 	o := tasks.Options{FrontID: opts.FrontID, FrontSecret: tasks.Secret{Password: opts.FrontPassword, Passphrase: opts.FrontPassphrase},
-		Remark: strings.TrimSpace(opts.Remark), RateMbps: opts.RateMbps, Target: opts.Target, Action: opts.Action, Items: opts.Items}
+		Remark: strings.TrimSpace(opts.Remark), RateMbps: opts.RateMbps, Target: opts.Target, UDP: opts.UDP, Action: opts.Action, Items: opts.Items}
 	if opts.ConfigName != "" {
 		path, err := a.configPath(opts.ConfigName)
 		if err != nil {
@@ -275,17 +275,13 @@ func (a *App) readConfig(name string) ([]byte, error) {
 }
 
 // ForwardRequest is the text a node's owner sends to the friend who relays:
-// the node's address, nothing else.
+// the node's address and whether it serves UDP, nothing else.
 func (a *App) ForwardRequest(configName string) (string, error) {
 	data, err := a.readConfig(configName)
 	if err != nil {
 		return "", err
 	}
-	node, err := tasks.NodeEntry(data)
-	if err != nil {
-		return "", err
-	}
-	return tasks.ShareRequest(node), nil
+	return tasks.RequestFor(data)
 }
 
 // CheckFriendEntry reads the text a friend sent back, compares it with the
@@ -304,7 +300,7 @@ func (a *App) CheckFriendEntry(configName, text string) (FriendCheckDTO, error) 
 		conn.Close()
 		reachable = "reachable"
 	}
-	return FriendCheckDTO{Entry: c.Entry, Target: c.Target, Node: c.Node, Matches: c.Matches, Reachable: reachable}, nil
+	return FriendCheckDTO{Entry: c.Entry, Target: c.Target, Node: c.Node, Matches: c.Matches, Reachable: reachable, NodeUDP: c.NodeUDP, UDP: c.UDP}, nil
 }
 
 // SaveFriendConfig writes a new configuration that reaches the node through

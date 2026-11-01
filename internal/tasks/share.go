@@ -17,13 +17,37 @@ import (
 const (
 	requestPrefix = "MSBOOST 中转请求 "
 	entryPrefix   = "MSBOOST 中转入口 "
+	// udpNote ends a text when the node serves UDP, or the relay forwards it.
+	// Older versions read only the addresses and pass over it.
+	udpNote = " · 支持 UDP"
 )
 
 // ShareRequest is what a node's owner sends to the friend who relays.
-func ShareRequest(node string) string { return requestPrefix + node }
+func ShareRequest(node string, udp bool) string { return requestPrefix + node + note(udp) }
 
 // ShareEntry is what the relay's owner sends back.
-func ShareEntry(entry, target string) string { return entryPrefix + entry + " → " + target }
+func ShareEntry(entry, target string, udp bool) string {
+	return entryPrefix + entry + " → " + target + note(udp)
+}
+
+func note(udp bool) string {
+	if udp {
+		return udpNote
+	}
+	return ""
+}
+
+// MentionsUDP says whether pasted text carries the UDP note.
+func MentionsUDP(text string) bool { return strings.Contains(text, "UDP") }
+
+// RequestFor is the request text for a configuration.
+func RequestFor(config []byte) (string, error) {
+	info, err := executor.ParseClientConfig(config)
+	if err != nil {
+		return "", err
+	}
+	return ShareRequest(net.JoinHostPort(info.TargetHost, strconv.Itoa(info.TargetPort)), info.UDP), nil
+}
 
 var endpoint = regexp.MustCompile(`\[[0-9A-Fa-f:.]+\]:\d{1,5}|(?:\d{1,3}\.){3}\d{1,3}:\d{1,5}`)
 
@@ -81,15 +105,18 @@ type FriendCheck struct {
 	Target  string `json:"target"`  // where the friend says it forwards, "" when not said
 	Node    string `json:"node"`    // the node of the chosen configuration
 	Matches string `json:"matches"` // yes, no or unknown (no target in the text)
+	NodeUDP bool   `json:"nodeUdp"` // the configuration has UDP
+	UDP     bool   `json:"udp"`     // and the relay forwards it: the new configuration has UDP too
 }
 
 // CheckFriendEntry compares the text a relay's owner sent with the node of
 // the configuration it is meant for.
 func CheckFriendEntry(config []byte, text string) (FriendCheck, error) {
-	node, err := NodeEntry(config)
+	info, err := executor.ParseClientConfig(config)
 	if err != nil {
 		return FriendCheck{}, err
 	}
+	node := net.JoinHostPort(info.TargetHost, strconv.Itoa(info.TargetPort))
 	entry, target, err := ParseEntry(text)
 	if err != nil {
 		return FriendCheck{}, err
@@ -97,7 +124,7 @@ func CheckFriendEntry(config []byte, text string) (FriendCheck, error) {
 	if entry == node {
 		return FriendCheck{}, errors.New("这是你自己节点的地址，不是朋友的中转入口")
 	}
-	c := FriendCheck{Entry: entry, Target: target, Node: node, Matches: "unknown"}
+	c := FriendCheck{Entry: entry, Target: target, Node: node, Matches: "unknown", NodeUDP: info.UDP, UDP: info.UDP && MentionsUDP(text)}
 	if target != "" {
 		c.Matches = map[bool]string{true: "yes", false: "no"}[target == node]
 	}
@@ -118,6 +145,9 @@ func FriendConfig(config []byte, text, name string) ([]byte, error) {
 	host, port, _ := net.SplitHostPort(c.Entry)
 	n, _ := strconv.Atoi(port)
 	out, err := executor.RewriteClientConfig(config, host, n)
+	if err == nil && c.UDP {
+		out, err = executor.WithUDPBinding(out)
+	}
 	if err != nil {
 		return nil, err
 	}

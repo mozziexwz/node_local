@@ -174,11 +174,13 @@ export namespace main {
 	    node: string;
 	    matches: string;
 	    reachable: string;
-	
+	    nodeUdp: boolean;
+	    udp: boolean;
+
 	    static createFrom(source: any = {}) {
 	        return new FriendCheckDTO(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.entry = source["entry"];
@@ -186,6 +188,8 @@ export namespace main {
 	        this.node = source["node"];
 	        this.matches = source["matches"];
 	        this.reachable = source["reachable"];
+	        this.nodeUdp = source["nodeUdp"];
+	        this.udp = source["udp"];
 	    }
 	}
 	
@@ -338,13 +342,14 @@ export namespace main {
 	    remark: string;
 	    rateMbps: number;
 	    target: string;
+	    udp: boolean;
 	    action: string;
 	    items: string[];
-	
+
 	    static createFrom(source: any = {}) {
 	        return new TaskOptions(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.configName = source["configName"];
@@ -354,6 +359,7 @@ export namespace main {
 	        this.remark = source["remark"];
 	        this.rateMbps = source["rateMbps"];
 	        this.target = source["target"];
+	        this.udp = source["udp"];
 	        this.action = source["action"];
 	        this.items = source["items"];
 	    }
@@ -455,7 +461,8 @@ export namespace tasks {
 	    createdAt: number;
 	    source: string;
 	    remark: string;
-	
+	    udp?: boolean;
+
 	    static createFrom(source: any = {}) {
 	        return new RelayRow(source);
 	    }
@@ -473,6 +480,7 @@ export namespace tasks {
 	        this.createdAt = source["createdAt"];
 	        this.source = source["source"];
 	        this.remark = source["remark"];
+	        this.udp = source["udp"];
 	    }
 	}
 	export class Outcome {
