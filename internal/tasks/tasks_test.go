@@ -80,12 +80,18 @@ func (f *fakeServer) Run(ctx context.Context, s executor.SSH, script string) ([]
 		return []byte("MSBOOST_READY=1\n"), nil
 	case strings.Contains(script, "MSBOOST_FORCE_FRESH=1"):
 		return []byte("MSBOOST_BBR=enabled\nMSBOOST_STEP=Installing required packages\nMSBOOST_CONFIG=" + b64(nodeConfig) + "\n"), nil
+	case strings.Contains(script, "MSBOOST_UDP_TARGET"):
+		return []byte("MSBOOST_UDP_TARGET=silent\n"), nil
 	case strings.Contains(script, "MSBOOST_RELAY_PORT"):
 		port := relayPorts[s.Host]
 		if port == "" {
 			port = "33333"
 		}
-		return []byte("MSBOOST_BBR=enabled\nMSBOOST_RELAY_PORT=" + port + "\n"), nil
+		udp := ""
+		if strings.Contains(script, "udp=$(printf '%s' '"+b64("1")+"' | base64 -d)") {
+			udp = "MSBOOST_RELAY_UDP=1\n"
+		}
+		return []byte("MSBOOST_BBR=enabled\nMSBOOST_RELAY_PORT=" + port + "\n" + udp), nil
 	case strings.Contains(script, "MSBOOST_INVENTORY"):
 		return []byte("MSBOOST_OS=Debian 12\nMSBOOST_INVENTORY=" + b64(f.inventory) + "\n"), nil
 	case strings.Contains(script, "MSBOOST_MANAGE"):
@@ -536,6 +542,19 @@ func TestFriendRelayListManageAndUninstall(t *testing.T) {
 	}
 	if !kinds[Forward] || !kinds[RelayManage] || !kinds[RelayUninstall] || kinds[RelayList] {
 		t.Fatalf("recorded kinds %v", kinds)
+	}
+}
+
+func TestFriendRelayWithUDP(t *testing.T) {
+	h := newHarness(t)
+	forward, _ := h.wait(h.start(Forward, h.relay, Options{Target: "9.9.9.9:30512", UDP: true}).ID)
+	if forward.State != "succeeded" || forward.Outcome.Share != "MSBOOST 中转入口 1.1.1.1:41203 → 9.9.9.9:30512 · 支持 UDP" || !forward.Outcome.Hops[0].UDP {
+		t.Fatalf("forward %+v %+v", forward, forward.Outcome)
+	}
+	h.fake.inventory = `[{"id":"` + forward.ID + `r","role":"relay","port":41203,"rateMbps":5,"target":"9.9.9.9:30512","state":"running","connections":0,"createdAt":1,"udp":true}]`
+	list, _ := h.wait(h.start(RelayList, h.relay, Options{}).ID)
+	if rows := list.Outcome.Relays; list.State != "succeeded" || len(rows) != 1 || !rows[0].UDP {
+		t.Fatalf("list %+v", list.Outcome)
 	}
 }
 

@@ -101,6 +101,7 @@ type Options struct {
 	Remark      string   // Relay, Forward
 	RateMbps    int      // Relay, Forward; RelayManage with action "rate"
 	Target      string   // Forward: the friend's node as host:port
+	UDP         bool     // Forward: the friend's node also serves UDP
 	Action      string   // RelayManage: pause, resume, restart, rate or delete
 	Items       []string // RelayManage: managed relay IDs
 }
@@ -151,6 +152,7 @@ type RelayRow struct {
 	CreatedAt   int64  `json:"createdAt"`
 	Source      string `json:"source"` // self, friend, front, website, code or unknown
 	Remark      string `json:"remark"`
+	UDP         bool   `json:"udp,omitempty"` // it also forwards UDP on Port
 }
 
 // Record is one finished operation in local\tasks.json.
@@ -651,7 +653,7 @@ func (r *Runner) run(ctx context.Context, j *job, p *plan) {
 		state, out = r.finishRelay(p, task.ID, e.Execute(ctx, task), settings)
 	case Forward:
 		task.Request = executor.Request{SSH: p.conn, RateMbps: p.opts.RateMbps}
-		state, out = r.finishForward(p, task.ID, e.ForwardRelay(ctx, task, p.target, p.port))
+		state, out = r.finishForward(p, task.ID, e.ForwardRelay(ctx, task, p.target, p.port, p.opts.UDP))
 	case RelayList:
 		task.Request = executor.Request{Kind: "relay-inventory", SSH: p.conn}
 		state, out = r.finishList(sv, e.Execute(ctx, task))
@@ -869,7 +871,7 @@ func (r *Runner) finishForward(p *plan, taskID string, res executor.Result) (str
 		r.log.Printf(logx.Task, "无法保存中转记录：%v", err)
 	}
 	r.bumpRelays(p.server.ID, 1)
-	return "succeeded", Outcome{Phase: res.Phase, Message: res.Message, Health: res.Health, Hops: res.Hops, Entry: entry, Share: ShareEntry(entry, target)}
+	return "succeeded", Outcome{Phase: res.Phase, Message: res.Message, Health: res.Health, Hops: res.Hops, Entry: entry, Share: ShareEntry(entry, target, h.UDP)}
 }
 
 func (r *Runner) finishList(sv servers.Server, res executor.Result) (string, Outcome) {
@@ -879,7 +881,7 @@ func (r *Runner) finishList(sv servers.Server, res executor.Result) (string, Out
 	rows := make([]RelayRow, 0, len(res.Inventory))
 	for _, e := range res.Inventory {
 		row := RelayRow{ID: e.ID, Role: e.Role, Port: e.Port, Entry: net.JoinHostPort(sv.Host, strconv.Itoa(e.Port)), RateMbps: e.RateMbps,
-			Target: e.Target, State: e.State, Connections: e.Connections, CreatedAt: e.CreatedAt, Source: "unknown"}
+			Target: e.Target, State: e.State, Connections: e.Connections, CreatedAt: e.CreatedAt, Source: "unknown", UDP: e.UDP}
 		if l, ok := r.relays.Find(sv.ID, e.ID); ok {
 			row.Source, row.Remark = l.Kind, l.Remark
 		} else if rec := e.Record; rec != nil {
