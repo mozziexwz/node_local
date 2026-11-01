@@ -40,6 +40,7 @@ export interface Hop {
     fromPort: number
     toHost: string
     toPort: number
+    udp?: boolean // also forwards UDP on fromPort
 }
 
 export interface RelayRow {
@@ -54,6 +55,7 @@ export interface RelayRow {
     createdAt: number
     source: string // self, friend, front, website, code or unknown
     remark: string
+    udp?: boolean // also forwards UDP on port
 }
 
 export interface Managed {
@@ -167,6 +169,7 @@ export interface TaskOptions {
     remark?: string
     rateMbps?: number
     target?: string
+    udp?: boolean
     action?: string
     items?: string[]
 }
@@ -182,6 +185,8 @@ export interface FriendCheck {
     node: string
     matches: 'yes' | 'no' | 'unknown'
     reachable: 'reachable' | 'unreachable'
+    nodeUdp: boolean // the configuration has UDP
+    udp: boolean // and the relay forwards it: the new configuration has UDP too
 }
 
 export interface Probe {
@@ -328,6 +333,16 @@ export function busyEvent(tasks: Record<string, TaskEvent>, serverId: string): T
 // endpoints finds IP:port pairs in pasted text, like the Go side.
 export function endpoints(text: string): string[] {
     return text.match(/\[[0-9A-Fa-f:.]+\]:\d{1,5}|(?:\d{1,3}\.){3}\d{1,3}:\d{1,5}/g) ?? []
+}
+
+// mentionsUDP says whether pasted text carries the UDP note, like the Go side.
+export function mentionsUDP(text: string): boolean {
+    return text.includes('UDP')
+}
+
+// shareEntry is the text a relay's owner sends back, like the Go side.
+export function shareEntry(entry: string, target: string, udp: boolean): string {
+    return `MSBOOST 中转入口 ${entry} → ${target}${udp ? ' · 支持 UDP' : ''}`
 }
 
 // hostOf is the host of "ip:port" or "[ipv6]:port".

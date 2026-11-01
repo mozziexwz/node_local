@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useState} from 'react'
-import {api, busyEvent, ConfigItem, endpoints, errorText, FriendCheck, hostOf, Overview, TaskEvent} from '../api'
+import {api, busyEvent, ConfigItem, endpoints, errorText, FriendCheck, hostOf, mentionsUDP, Overview, TaskEvent} from '../api'
 import {Banner, Card, Spinner} from '../components'
 import {useLaunch} from './launch'
 
@@ -59,6 +59,7 @@ function RelayForFriend(props: {
     const {launch, dialog} = useLaunch(props.onError)
     const relay = list.find(s => s.id === relayId)
     const target = endpoints(text)[0] ?? ''
+    const udp = mentionsUDP(text)
     const task = relay && props.tasks[relay.id]?.kind === 'forward' ? props.tasks[relay.id] : undefined
     const rateNumber = Number(rate)
     const ready = relay && target && Number.isInteger(rateNumber) && rateNumber >= 1 && rateNumber <= 10 && !busyEvent(props.tasks, relay.id)
@@ -67,17 +68,18 @@ function RelayForFriend(props: {
         if (!relay || !ready) return
         props.dismissTask(relay.id)
         setCopied(false)
-        launch(relay, 'forward', {target, remark: remark.trim(), rateMbps: rateNumber}, '创建中转')
+        launch(relay, 'forward', {target, udp, remark: remark.trim(), rateMbps: rateNumber}, '创建中转')
     }
     const share = task?.state === 'succeeded' ? task.outcome?.share ?? '' : ''
+    const hop = task?.state === 'succeeded' ? task.outcome?.hops?.[0] : undefined
 
     return <>
-        <Card title={<><span className="num">2</span>建中转</>} actions={<span className="hint">建之前先从中转服务器连一下朋友的节点端口</span>}>
+        <Card title={<><span className="num">2</span>建中转</>} actions={<span className="hint">建之前先从中转服务器检查朋友的节点端口</span>}>
             <div className="form-grid wide">
                 <label>朋友发来的</label>
                 <div className="with">
                     <input className="grow" value={text} placeholder="粘贴「MSBOOST 中转请求 …」，或只填 IP:端口" onChange={e => setText(e.target.value)}/>
-                    {text && (target ? <span className="ok small nowrap">✓ 目标 {target}</span> : <span className="bad small nowrap">没找到 IP:端口</span>)}
+                    {text && (target ? <span className="ok small nowrap">✓ 目标 {target}{udp && ' · 支持 UDP'}</span> : <span className="bad small nowrap">没找到 IP:端口</span>)}
                 </div>
                 <label>中转服务器</label>
                 <select value={relayId} onChange={e => setRelayId(e.target.value)}>
@@ -113,6 +115,8 @@ function RelayForFriend(props: {
                 </div>
                 {task?.outcome?.health?.publicTCP === 'unreachable' &&
                     <Banner kind="warn">这台电脑暂时连不上这个入口，请检查服务商安全组是否放行了入口端口。</Banner>}
+                {task?.outcome?.message && <p className="muted small">{task.outcome.message}</p>}
+                {hop?.udp && <p className="hint">服务器上的防火墙已经自动放行。如果服务商的网页控制台里有「安全组」，还要在那里放行 UDP {hop.fromPort}。</p>}
                 <p className="hint">朋友在本地版「我用朋友的中转」里粘贴这段文字就行。这条中转在「中转」页可以暂停、限速或删除；删除后朋友会连不上，删之前记得告诉他。</p>
             </>}
         </Card>
@@ -215,6 +219,8 @@ function UseFriendRelay(props: {launcher: boolean, onMessage: (m: Message | null
                         {check.matches === 'no' && <span className="bad">✗ 中转目标是 {check.target}，不是你的节点 {nodeHost}</span>}
                         {check.matches === 'unknown' && <span className="warn-text">没写中转目标，生成后请用启动器的网络检测确认</span>}
                         {check.reachable === 'reachable' ? <span className="ok">✓ 本机到入口可达</span> : <span className="bad">✗ 本机连不上入口</span>}
+                        {check.udp && <span className="ok">✓ 也中转 UDP，新配置在启动器里可以选 UDP</span>}
+                        {!check.udp && check.nodeUdp && <span className="muted">这条中转只走 TCP，新配置只能用 TCP</span>}
                     </>}
                 </div>
                 <label>新配置名</label>

@@ -1,5 +1,5 @@
 import {useCallback, useEffect, useRef, useState} from 'react'
-import {api, busyEvent, ConfigItem, errorText, hostOf, Overview, RelayRow, sameHost, Server, TaskEvent} from '../api'
+import {api, busyEvent, ConfigItem, errorText, hostOf, Overview, RelayRow, sameHost, Server, shareEntry, TaskEvent} from '../api'
 import type {AskConfirm} from '../App'
 import {Banner, Card, Spinner} from '../components'
 import {RateDialog, UninstallDialog} from './dialogs'
@@ -115,7 +115,7 @@ export function Relays(props: {
         }
     }
     const copyEntry = async (row: RelayRow) => {
-        await api.copy(`MSBOOST 中转入口 ${row.entry} → ${row.target}`)
+        await api.copy(shareEntry(row.entry, row.target, !!row.udp))
         setMessage({kind: 'info', text: `已复制端口 ${row.port} 的中转入口，发给朋友即可。`})
     }
 
@@ -173,7 +173,7 @@ export function Relays(props: {
                             <tbody>
                                 {shown.map(r => (
                                     <tr key={r.id}>
-                                        <td>{r.port}</td>
+                                        <td>{r.port}{r.udp && <span className="muted"> · 支持 UDP</span>}</td>
                                         <td>{r.target}</td>
                                         <td>{r.rateMbps} Mbps</td>
                                         <td className={r.state === 'running' ? 'ok' : 'muted'}>{r.state === 'running' && <span className="dot"/>}{stateLabels[r.state] ?? r.state}</td>
@@ -219,12 +219,15 @@ function Created(props: {task: TaskEvent, launcher: boolean, openLauncher: () =>
             </Banner>
         )
     }
+    // A relay serves UDP when every hop forwards it.
+    const udp = !!o.hops?.length && o.hops.every(h => h.udp)
     return (
         <Banner kind="info" onClose={props.done}>
-            中转已建好，入口 {o.entry}{o.health?.publicTCP === 'unreachable' && '（本机暂时连不上入口，请检查服务商安全组是否放行这个端口）'}。配置已保存为 {o.configPath}
+            中转已建好，入口 {o.entry}{udp && '，TCP 和 UDP 都能用'}{o.health?.publicTCP === 'unreachable' && '（本机暂时连不上入口，请检查服务商安全组是否放行这个端口）'}。配置已保存为 {o.configPath}
             {props.launcher
                 ? <>，在启动器的「节点配置」里选中它即可使用。<button className="link" onClick={props.openLauncher}>打开启动器</button></>
                 : '。启动器不在同一文件夹，需要把它复制到启动器的 configs 文件夹。'}
+            {udp && <><br/>服务器上的防火墙已经自动放行。如果服务商的网页控制台里有「安全组」，还要在那里放行中转端口的 UDP。</>}
         </Banner>
     )
 }
