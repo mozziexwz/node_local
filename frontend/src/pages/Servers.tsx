@@ -362,7 +362,7 @@ function Result(props: {
                             ? <dd className="ok">可达 {port && <span className="muted">（UDP {port}）</span>}</dd>
                             : h.publicUDP === 'unreachable'
                                 ? <dd className="bad">不可达 <span className="muted">检查服务商安全组是否放行{port ? ` UDP ${port}` : '同一端口的 UDP'}</span></dd>
-                                : <dd>已开启 <span className="muted">本程序查不了 UDP：服务商安全组也要放行{port ? ` UDP ${port}` : '同一端口的 UDP'}，再在启动器选 UDP 做「网络检测」</span></dd>}
+                                : <dd>已开启 <span className="muted">启动器要 v1.2.0 或更新版本，更早的版本会把 TCP 和 UDP 混着用。<br/>本程序查不了 UDP，请在启动器里选 UDP 做「网络检测」；服务器防火墙已自动放行，服务商控制台有安全组的话，还要放行{port ? ` UDP ${port}` : '同一端口的 UDP'}。</span></dd>}
                     </>}
                     {h.bbr && <><dt>BBR</dt><dd>{(bbrLabels[h.bbr] ?? h.bbr).replace('BBR ', '')}</dd></>}
                     <dt>游戏连接</dt>

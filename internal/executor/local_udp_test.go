@@ -11,7 +11,7 @@ func localTestConfigUDP(host string) string {
 	return strings.Replace(localTestConfig(host), `{"port":30000,"protocol":"TCP"}`, `{"port":30000,"protocol":"TCP"},{"port":30000,"protocol":"UDP"}`, 1)
 }
 
-func TestUpgradeOpensUDPAndSaysTheFileMustBeReimported(t *testing.T) {
+func TestUpgradeOpensUDPAndNamesTheLauncherItNeeds(t *testing.T) {
 	remote := upgradeRemote(localTestConfig("8.8.8.8"), localTestConfigUDP("8.8.8.8"), true)
 	var probed []byte
 	e := &Engine{Remote: remote, TCPProbe: func(context.Context, string, int) string { return "reachable" }, UDPProbe: func(_ context.Context, config []byte) string {
@@ -22,8 +22,8 @@ func TestUpgradeOpensUDPAndSaysTheFileMustBeReimported(t *testing.T) {
 	if r.State != "succeeded" || r.Health.PublicUDP != "reachable" || string(probed) != localTestConfigUDP("8.8.8.8") {
 		t.Fatalf("unexpected result: %+v", r)
 	}
-	if !strings.Contains(r.Message, "开启了 UDP") || !strings.Contains(r.Message, "重新导入") {
-		t.Fatalf("a node that gained UDP must say the new file is needed: %s", r.Message)
+	if !strings.Contains(r.Message, "开启了 UDP") || !strings.Contains(r.Message, "v1.2.0") {
+		t.Fatalf("a node that gained UDP must say which launcher its new file needs: %s", r.Message)
 	}
 	if !strings.Contains(remote.scripts[2], "MSBOOST_UDP=1 bash \"$work/installer.sh\" "+progressPipe) {
 		t.Fatal("an upgrade must ask the installer for UDP")
