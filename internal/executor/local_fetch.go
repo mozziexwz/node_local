@@ -26,12 +26,7 @@ printf '\n'
 // same way a deploy checks it, plus whether both services are running.
 func (e *Engine) FetchConfig(ctx context.Context, s SSH) Result {
 	r := Result{}
-	if e.Remote == nil {
-		e.Remote = SSHRemote{}
-	}
-	if e.TCPProbe == nil {
-		e.TCPProbe = probeTCP
-	}
+	e.localDefaults()
 	if err := ValidateSSH(s); err != nil {
 		return failed(r, "validate", err.Error())
 	}
@@ -55,7 +50,7 @@ func (e *Engine) FetchConfig(ctx context.Context, s SSH) Result {
 		service = "running"
 	}
 	r.State, r.Phase, r.Config = "succeeded", "complete", data
-	r.Message = "已从节点取回配置；公网 TCP 单独检查，游戏连通性尚未验证"
-	r.Health = &Health{Service: service, LocalSelfTest: "not_tested", PublicTCP: e.TCPProbe(ctx, info.TargetHost, info.TargetPort), Game: "not_tested"}
+	r.Message = "已从节点取回配置；公网 TCP 和 UDP 单独检查，游戏连通性尚未验证"
+	r.Health = &Health{Service: service, LocalSelfTest: "not_tested", PublicTCP: e.TCPProbe(ctx, info.TargetHost, info.TargetPort), PublicUDP: e.UDPProbe(ctx, data), Game: "not_tested"}
 	return r
 }

@@ -15,6 +15,13 @@ func (e *Engine) localDefaults() {
 	if e.TCPProbe == nil {
 		e.TCPProbe = probeTCP
 	}
+	// The same check as engine.go's Execute. It runs mihomo, which the engine
+	// supports on Linux only, so on this Windows program a configuration with
+	// UDP is reported "not_tested"; the page points to the launcher's network
+	// check instead.
+	if e.UDPProbe == nil {
+		e.UDPProbe = e.verifier().ProbeUDP
+	}
 }
 
 // DeployWithProgress is engine.go's deploy with the installer's stages
@@ -39,7 +46,7 @@ func (e *Engine) DeployWithProgress(ctx context.Context, job Job, progress func(
 	progress(StepBBR)
 	script := prepareAsset(job.Script) + bbrTuneScript + encodedAssignment("MSBOOST_SERVER_IP", job.Request.SSH.Host) + "export MSBOOST_SERVER_IP\nmsboost_phase=install\n"
 	script += encodedAssignment("node_user", "msboost-"+randomHex(8)) + encodedAssignment("node_pass", randomHex(24))
-	script += "MSBOOST_FORCE_FRESH=1 bash \"$work/installer.sh\" \"$node_user\" \"$node_pass\" " + progressPipe + "\n"
+	script += "MSBOOST_FORCE_FRESH=1 MSBOOST_UDP=1 bash \"$work/installer.sh\" \"$node_user\" \"$node_pass\" " + progressPipe + "\n"
 	script += installedTail
 	out, err := e.runWithProgress(ctx, job.Request.SSH, script, progress)
 	r.Health = &Health{BBR: marker(out, "MSBOOST_BBR")}
@@ -60,9 +67,9 @@ func (e *Engine) DeployWithProgress(ctx context.Context, job Job, progress func(
 	}
 	r.State = "succeeded"
 	r.Phase = "complete"
-	r.Message = "节点服务及全程 TCP 测速协议自测通过；公网 TCP 单独检查，游戏连通性尚未验证"
+	r.Message = "节点服务及全程 TCP 测速协议自测通过；公网 TCP 和 UDP 单独检查，游戏连通性尚未验证"
 	r.Config = data
-	r.Health = &Health{Service: "running", LocalSelfTest: "passed", PublicTCP: e.TCPProbe(ctx, info.TargetHost, info.TargetPort), Game: "not_tested", BBR: marker(out, "MSBOOST_BBR")}
+	r.Health = &Health{Service: "running", LocalSelfTest: "passed", PublicTCP: e.TCPProbe(ctx, info.TargetHost, info.TargetPort), PublicUDP: e.UDPProbe(ctx, data), Game: "not_tested", BBR: marker(out, "MSBOOST_BBR")}
 	return r
 }
 
@@ -102,7 +109,8 @@ func (e *Engine) UpgradeWithProgress(ctx context.Context, job Job, progress func
 		script += encodedAssignment("MSBOOST_SERVER_IP", old.TargetHost) + "export MSBOOST_SERVER_IP\n"
 	}
 	script += "msboost_phase=install\n[ -f /etc/msboost/install.env ]\n"
-	script += "bash \"$work/installer.sh\" " + progressPipe + "\n"
+	// An upgrade adds UDP to a TCP-only node when its port is free for it.
+	script += "MSBOOST_UDP=1 bash \"$work/installer.sh\" " + progressPipe + "\n"
 	script += installedTail
 	out, err := e.runWithProgress(ctx, s, script, progress)
 	r.Health = &Health{BBR: marker(out, "MSBOOST_BBR")}
@@ -123,8 +131,13 @@ func (e *Engine) UpgradeWithProgress(ctx context.Context, job Job, progress func
 	}
 	r.State = "succeeded"
 	r.Phase = "complete"
-	r.Message = "节点已升级，配置没有变化；公网 TCP 单独检查，游戏连通性尚未验证"
+	// The existing file keeps working either way; a node that now serves UDP
+	// only offers it through the new file.
+	r.Message = "节点已升级，入口和认证没变，原配置继续可用；公网 TCP 和 UDP 单独检查，游戏连通性尚未验证"
+	if info.UDP && !old.UDP {
+		r.Message = "节点已升级并开启了 UDP，入口和认证没变；要用 UDP 需重新导入新配置。公网 TCP 和 UDP 单独检查，游戏连通性尚未验证"
+	}
 	r.Config = data
-	r.Health = &Health{Service: "running", LocalSelfTest: "passed", PublicTCP: e.TCPProbe(ctx, info.TargetHost, info.TargetPort), Game: "not_tested", BBR: marker(out, "MSBOOST_BBR")}
+	r.Health = &Health{Service: "running", LocalSelfTest: "passed", PublicTCP: e.TCPProbe(ctx, info.TargetHost, info.TargetPort), PublicUDP: e.UDPProbe(ctx, data), Game: "not_tested", BBR: marker(out, "MSBOOST_BBR")}
 	return r
 }

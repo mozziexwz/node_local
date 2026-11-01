@@ -33,17 +33,22 @@ const (
 	repository    = "https://github.com/mozziexwz/node"
 	executorDir   = "internal/executor"
 	installerPath = "installers/node/msboost.sh"
-	gostEnvPath   = "deploy/agent-executor.env.example"
+	gostEnvPath   = "deploy/install-agent.sh"
 	gostJSONPath  = "installers/gost.json"
 	manifestPath  = "UPSTREAM.json"
 )
 
 // Files of the executor package the local edition does not use: the website
-// polling client, the administrator's SFTP backup helper, and the DD test that
-// needs the reinstall script (DD is not part of the local edition yet).
+// polling client, the administrator's SFTP backup helper, the DD test that
+// needs the reinstall script (DD is not part of the local edition yet), and
+// the website's upgrade and fetch test, which checks the website's wording:
+// the local edition upgrades and fetches through UpgradeWithProgress and
+// FetchConfig with its own messages (local_diagnostics.go), tested in
+// local_deploy_test.go and local_fetch_test.go.
 var excluded = map[string]bool{
 	"client.go":              true,
 	"client_test.go":         true,
+	"node_upgrade_test.go":   true,
 	"sftp_ownership.go":      true,
 	"sftp_ownership_test.go": true,
 	"unattended_test.go":     true,
@@ -223,8 +228,9 @@ func blob(source, commit, from, to string) (synced, error) {
 	return synced{file{Path: to, From: from, SHA256: digest(data)}, data}, nil
 }
 
-// gostPins turns the executor's pinned GOST archives (an env example on the
-// website) into installers/gost.json.
+// gostPins turns the executor's pinned GOST archives into installers/gost.json.
+// The website's agent installer writes them into the executor environment as
+// GOST_<ARCH>_URL= and GOST_<ARCH>_SHA256= lines.
 func gostPins(source, commit string) (synced, error) {
 	env, err := git(source, "cat-file", "blob", commit+":"+gostEnvPath)
 	if err != nil {

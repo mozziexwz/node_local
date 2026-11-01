@@ -53,7 +53,7 @@ Go 1.27.1 + Wails v2.16.0 + React 19，与启动器同一套工具链；Windows 
 - `go run ./scripts/syncnode -tag <网站标签> [-source ..\MSBOOST.DE]` 从网站仓库的固定标签取文件（`git cat-file`，字节不变）：
   - `internal/executor` 的源码和测试，不含 `client.go`（轮询网站）、`sftp_ownership.go`（网站备份用）和 `unattended_test.go`（DD 测试，需要 reinstall 脚本）。依赖只剩 x/crypto/ssh。
   - `installers/node/msboost.sh`，与网站同一路径，引擎测试按这个相对路径读取它。
-  - `installers/gost.json`：从网站 `deploy/agent-executor.env.example` 提取的 GOST 下载地址和 sha256。
+  - `installers/gost.json`：从网站 `deploy/install-agent.sh` 提取的 GOST 下载地址和 sha256（v2.10.0 之前取自 `deploy/agent-executor.env.example`，网站后来删掉了这个文件）。
   - 来源标签、提交号和每个文件的 sha256 写进根目录 `UPSTREAM.json`。
 - 同步来的文件不手改。本地新增放在 `internal/executor/local_*.go`，同步时不碰；它们和引擎同包，可以直接用 `marker`、`failRemote`、`ParseClientConfig` 等现成函数。
 - `installers` 包用 `go:embed` 内嵌安装脚本和 GOST 固定值，`installers.NewEngine()` 返回配好 GOST 的引擎，`installers.NodeScript()` 返回部署要用的脚本和 sha256。

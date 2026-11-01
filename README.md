@@ -29,7 +29,7 @@
 执行引擎（`internal/executor`）和节点安装脚本（`installers/node/msboost.sh`）原样复制自网站仓库 [mozziexwz/node](https://github.com/mozziexwz/node) 的固定版本，来源和每个文件的 sha256 记录在 [UPSTREAM.json](UPSTREAM.json)。这些文件不要手改，用同步工具更新：
 
 ```powershell
-go run ./scripts/syncnode -tag v2.7.0 -source ..\MSBOOST.DE
+go run ./scripts/syncnode -tag v2.11.0 -source ..\MSBOOST.DE
 ```
 
 本地版自己的补充放在 `internal/executor/local_*.go`，同步时不受影响。CI 会从网站仓库重新生成同步文件并逐字节比对。
