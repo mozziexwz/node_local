@@ -2,11 +2,12 @@
 
 在自己的电脑上用 SSH 直接部署和管理 MSBOOST 节点与自备中转。SSH 密码或私钥只在本机内存里使用，不经过网站，也不保存到硬盘。
 
-> **状态：v1.1.0（节点和中转支持 UDP）已于 2026-11-01 发布；v1.0.0 于 2026-10-22 发布（M0–M3 完成）。** 规划见 [docs/MSBOOST本地版开发规划.md](docs/MSBOOST本地版开发规划.md)，各阶段说明在 [docs/m0](docs/m0/README.md)、[docs/m1](docs/m1/README.md)、[docs/m2](docs/m2/README.md)、[docs/m3](docs/m3/README.md)、[docs/v1.1.0](docs/v1.1.0/README.md)。
+> **状态：v1.2.0（部署节点时自动配置 fail2ban）准备发布；v1.1.0（节点和中转支持 UDP）已于 2026-11-01 发布；v1.0.0 于 2026-10-22 发布（M0–M3 完成）。** 规划见 [docs/MSBOOST本地版开发规划.md](docs/MSBOOST本地版开发规划.md)，各阶段说明在 [docs/m0](docs/m0/README.md)、[docs/m1](docs/m1/README.md)、[docs/m2](docs/m2/README.md)、[docs/m3](docs/m3/README.md)、[docs/v1.1.0](docs/v1.1.0/README.md)、[docs/v1.2.0](docs/v1.2.0/README.md)。
 
 ## 能做什么
 
 - 部署 MSBOOST 节点：与网站「部署 MSBOOST」使用同一个安装脚本，部署出的配置文件直接给 MSBOOST 启动器用。节点在同一端口同时提供 TCP 和 UDP，用哪种在启动器 v1.2.0 或更新版本里选。
+- 部署和升级节点时自动配置 fail2ban，保护服务器的 SSH；这台电脑所在的网段不会被封。
 - 保留配置升级/修复节点、取回配置、查看节点状态。
 - 自备中转（可加前置机）与中转服务器管理。
 - 朋友中转：帮朋友建中转，或用朋友的中转生成新配置。双方只交换 IP 和端口，都不交出 SSH 或节点密码。
