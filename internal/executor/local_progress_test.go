@@ -38,54 +38,74 @@ func localTestAsset() Asset {
 }
 
 // deployRemote answers the preflight and the deploy script like a server
-// whose installer succeeded and announced two stages.
+// whose installer succeeded and announced two stages, and whose SSH
+// protection step, when the script has one, turned fail2ban on.
 func deployRemote(config string) *fakeRemote {
 	return &fakeRemote{run: func(_ SSH, script string) ([]byte, error) {
 		if strings.Contains(script, "MSBOOST_READY=1") {
 			return []byte("MSBOOST_READY=1\n"), nil
 		}
-		return []byte("MSBOOST_BBR=enabled\nMSBOOST_STEP=Installing required packages\nMSBOOST_STEP=Downloading and verifying the pinned engine v1.19.32\nMSBOOST_CONFIG=" +
-			base64.StdEncoding.EncodeToString([]byte(config)) + "\n"), nil
+		out := "MSBOOST_BBR=enabled\nMSBOOST_STEP=Installing required packages\nMSBOOST_STEP=Downloading and verifying the pinned engine v1.19.32\nMSBOOST_CONFIG=" +
+			base64.StdEncoding.EncodeToString([]byte(config)) + "\n"
+		return []byte(out + fail2banAnswer(script)), nil
 	}}
+}
+
+// fail2banAnswer is what a script's SSH protection step prints when it
+// enables fail2ban; a script without the step prints nothing of it.
+func fail2banAnswer(script string) string {
+	if !strings.Contains(script, "msboost_fail2ban()") {
+		return ""
+	}
+	return "MSBOOST_STEP=" + Fail2banStepNote + "\nMSBOOST_FAIL2BAN=enabled\n"
 }
 
 var randomCredentials = regexp.MustCompile(`(node_user|node_pass)=\$\(printf '%s' '[A-Za-z0-9+/=]*'`)
 
 // DeployWithProgress must send exactly engine.go's deploy, except that the
-// installer's output also passes through the progress pipe.
+// installer's output also passes through the progress pipe; with SSH
+// protection too, which then shows as its own step.
 func TestDeployWithProgressSendsTheEngineDeploy(t *testing.T) {
-	job := Job{ID: "a1", Request: Request{Kind: "deploy", Mode: "fresh", SSH: localTestSSH()}, Script: localTestAsset()}
-	upstream := deployRemote(localTestConfig("8.8.8.8"))
-	probe := func(context.Context, string, int) string { return "reachable" }
-	want := (&Engine{Remote: upstream, TCPProbe: probe}).Execute(context.Background(), job)
-	local := deployRemote(localTestConfig("8.8.8.8"))
-	var steps []Step
-	got := (&Engine{Remote: local, TCPProbe: probe}).DeployWithProgress(context.Background(), job, func(s Step) { steps = append(steps, s) })
+	for _, protect := range []*Fail2banOptions{nil, {ClientBits: 16}} {
+		job := Job{ID: "a1", Request: Request{Kind: "deploy", Mode: "fresh", SSH: localTestSSH(), Fail2ban: protect}, Script: localTestAsset()}
+		upstream := deployRemote(localTestConfig("8.8.8.8"))
+		probe := func(context.Context, string, int) string { return "reachable" }
+		want := (&Engine{Remote: upstream, TCPProbe: probe}).Execute(context.Background(), job)
+		local := deployRemote(localTestConfig("8.8.8.8"))
+		var steps []Step
+		got := (&Engine{Remote: local, TCPProbe: probe}).DeployWithProgress(context.Background(), job, func(s Step) { steps = append(steps, s) })
 
-	if want.State != "succeeded" || got.State != want.State || string(got.Config) != string(want.Config) || *got.Health != *want.Health || got.Message != want.Message {
-		t.Fatalf("results differ:\nengine %+v\nlocal  %+v", want, got)
-	}
-	if len(local.scripts) != len(upstream.scripts) {
-		t.Fatalf("local sent %d scripts, engine %d", len(local.scripts), len(upstream.scripts))
-	}
-	for i := range local.scripts {
-		norm := func(s string) string { return randomCredentials.ReplaceAllString(s, "$1=X") }
-		w := norm(upstream.scripts[i])
-		g := norm(strings.Replace(local.scripts[i], progressPipe, `>"$work/private.log" 2>&1`, 1))
-		if g != w {
-			t.Fatalf("script %d differs from engine.go's deploy; resync DeployWithProgress", i)
+		if want.State != "succeeded" || got.State != want.State || string(got.Config) != string(want.Config) || *got.Health != *want.Health || got.Message != want.Message {
+			t.Fatalf("fail2ban %+v: results differ:\nengine %+v\nlocal  %+v", protect, want, got)
 		}
-	}
-	if !strings.Contains(local.scripts[1], progressPipe) {
-		t.Fatal("deploy script lacks the progress pipe")
-	}
-	wantSteps := []Step{StepConnect, StepBBR, StepPackages, StepEngine, StepConfig}
-	if len(steps) != len(wantSteps) {
-		t.Fatalf("steps %v, want %v", steps, wantSteps)
-	}
-	for i := range steps {
-		if steps[i] != wantSteps[i] {
+		if protected := got.Health.Fail2ban == "enabled"; protected != (protect != nil) {
+			t.Fatalf("fail2ban %+v: SSH protection reported as %q", protect, got.Health.Fail2ban)
+		}
+		if len(local.scripts) != len(upstream.scripts) {
+			t.Fatalf("local sent %d scripts, engine %d", len(local.scripts), len(upstream.scripts))
+		}
+		for i := range local.scripts {
+			norm := func(s string) string { return randomCredentials.ReplaceAllString(s, "$1=X") }
+			w := norm(upstream.scripts[i])
+			g := norm(strings.Replace(local.scripts[i], progressPipe, `>"$work/private.log" 2>&1`, 1))
+			if g != w {
+				t.Fatalf("fail2ban %+v: script %d differs from engine.go's deploy; resync DeployWithProgress", protect, i)
+			}
+		}
+		if !strings.Contains(local.scripts[1], progressPipe) {
+			t.Fatal("deploy script lacks the progress pipe")
+		}
+		wantSteps := []Step{StepConnect, StepBBR, StepPackages, StepEngine, StepConfig}
+		if protect != nil {
+			wantSteps = []Step{StepConnect, StepBBR, StepPackages, StepEngine, StepFail2ban, StepConfig}
+		}
+		if len(steps) != len(wantSteps) {
 			t.Fatalf("steps %v, want %v", steps, wantSteps)
+		}
+		for i := range steps {
+			if steps[i] != wantSteps[i] {
+				t.Fatalf("steps %v, want %v", steps, wantSteps)
+			}
 		}
 	}
 }

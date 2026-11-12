@@ -17,6 +17,10 @@ export interface Health {
     // program cannot run the check, so a configuration with UDP is not_tested
     publicUDP?: string
     game: string
+    // SSH protection: enabled, existing (the server's own fail2ban
+    // configuration, left untouched), unavailable or review_required; absent
+    // from tasks that do not configure it
+    fail2ban?: string
 }
 
 export interface CleanupItem {
@@ -276,6 +280,7 @@ export const stepLabels = [
     '下载分流规则',
     '检查配置并安装服务',
     '本机自测',
+    '配置 SSH 防护',
     '保存配置文件',
 ]
 

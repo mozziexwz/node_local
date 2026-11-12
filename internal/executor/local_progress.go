@@ -25,11 +25,14 @@ const (
 	StepRules                     // downloading the routing rules
 	StepInstall                   // checking the configuration, installing the service
 	StepSelfTest                  // self-tests and the local firewall
+	StepFail2ban                  // protecting SSH with fail2ban
 	StepConfig                    // reading back the client configuration
 )
 
 // installerSteps maps the installer's announcements (msboost.sh note calls)
 // to steps. TestEveryInstallerNoteHasAStep keeps it complete after a sync.
+// The engine's fail2ban step, which runs after the installer, announces
+// itself the same way.
 var installerSteps = []struct {
 	prefix string
 	step   Step
@@ -44,6 +47,7 @@ var installerSteps = []struct {
 	{"Validating the loopback TCP probe", StepSelfTest},
 	{"Running a local end-to-end proxy self-test", StepSelfTest},
 	{"Updating any active local firewall", StepSelfTest},
+	{Fail2banStepNote, StepFail2ban},
 }
 
 func installerStep(note string) (Step, bool) {
