@@ -175,6 +175,21 @@ const bbrLabels: Record<string, string> = {
     enabled: 'BBR 已开启', off: 'BBR 未开启', unavailable: '内核不支持 BBR', review_required: 'BBR 需要人工检查', partial: 'BBR 部分开启',
 }
 
+// What a deploy or upgrade did about fail2ban. Anything else the engine
+// reports means it did not turn it on, which leaves the node unaffected.
+function Fail2banState(props: {state: string}) {
+    switch (props.state) {
+    case 'enabled':
+        return <dd className="ok">已开启 <span className="muted">同一 IP 15 分钟内输错 5 次 SSH 密码封 1 天，再犯翻倍；这台电脑所在的网段不会被封</span></dd>
+    case 'existing':
+        return <dd>服务器已有 fail2ban 配置，没有改动</dd>
+    case 'review_required':
+        return <dd className="bad">没有配好 <span className="muted">请登录服务器检查 fail2ban 服务</span></dd>
+    default:
+        return <dd>没有开启 <span className="muted">不影响节点使用</span></dd>
+    }
+}
+
 function NodeLine(props: {server: Server}) {
     const node = props.server.node
     if (!node) return <span className="muted">还没检查，点「刷新状态」看看</span>
@@ -265,12 +280,12 @@ function Detail(props: {
             </div>
             {installed ? (
                 <div className="explain">
-                    <b>升级节点</b><span>换新版安装脚本，用户名、密码、端口不变，原配置继续能用。</span>
+                    <b>升级节点</b><span>换新版安装脚本并配置 SSH 防护，用户名、密码、端口不变，原配置继续能用。</span>
                     <b>重新部署</b><span>生成新配置，旧配置立即失效。</span>
                     <b>取回配置</b><span>从节点读回当前配置，不改动服务器；部署时断线没拿到配置就用它。</span>
                 </div>
             ) : (
-                <p className="hint">部署会安装 MSBOOST 节点并开启 BBR，通常 2–5 分钟。服务器需要 Debian 11–13，并能访问 GitHub。</p>
+                <p className="hint">部署会安装 MSBOOST 节点、开启 BBR，并用 fail2ban 保护 SSH，通常 2–5 分钟。服务器需要 Debian 11–13，并能访问 GitHub。</p>
             )}
         </Card>
     )
@@ -365,6 +380,7 @@ function Result(props: {
                                 : <dd>已开启 <span className="muted">启动器要 v1.2.0 或更新版本，更早的版本会把 TCP 和 UDP 混着用。<br/>本程序查不了 UDP，请在启动器里选 UDP 做「网络检测」；服务器防火墙已自动放行，服务商控制台有安全组的话，还要放行{port ? ` UDP ${port}` : '同一端口的 UDP'}。</span></dd>}
                     </>}
                     {h.bbr && <><dt>BBR</dt><dd>{(bbrLabels[h.bbr] ?? h.bbr).replace('BBR ', '')}</dd></>}
+                    {h.fail2ban && <><dt>SSH 防护</dt><Fail2banState state={h.fail2ban}/></>}
                     <dt>游戏连接</dt>
                     <dd><span className="muted">还没测：在启动器选中这份配置，看「网络检测」</span></dd>
                 </dl>

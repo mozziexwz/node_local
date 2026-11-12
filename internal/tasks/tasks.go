@@ -632,10 +632,10 @@ func (r *Runner) run(ctx context.Context, j *job, p *plan) {
 	task := executor.Job{ID: j.event.ID, Script: installers.NodeScript()}
 	switch kind {
 	case Deploy:
-		task.Request = executor.Request{Kind: "deploy", Mode: "fresh", SSH: p.conn}
+		task.Request = executor.Request{Kind: "deploy", Mode: "fresh", SSH: p.conn, Fail2ban: sshProtection()}
 		state, out = r.finishConfig(sv, e.DeployWithProgress(ctx, task, progress), settings)
 	case Upgrade:
-		task.Request = executor.Request{SSH: p.conn}
+		task.Request = executor.Request{SSH: p.conn, Fail2ban: sshProtection()}
 		state, out = r.finishConfig(sv, e.UpgradeWithProgress(ctx, task, progress), settings)
 	case Fetch:
 		state, out = r.finishConfig(sv, e.FetchConfig(ctx, p.conn), settings)
@@ -728,6 +728,14 @@ func (r *Runner) run(ctx context.Context, j *job, p *plan) {
 func recordOutcome(o Outcome) Outcome {
 	o.Relays = nil
 	return o
+}
+
+// sshProtection has a deploy or an upgrade protect the server's SSH with
+// fail2ban. Only this computer is never banned, as the /16 network the server
+// sees it connect from: a home connection's address changes, usually within
+// that range. Through the SOCKS5 proxy that is the proxy's exit.
+func sshProtection() *executor.Fail2banOptions {
+	return &executor.Fail2banOptions{ClientBits: 16}
 }
 
 // failure turns an engine result into an outcome.

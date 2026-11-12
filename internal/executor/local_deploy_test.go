@@ -23,9 +23,41 @@ func upgradeRemote(before, after string, installed bool) *fakeRemote {
 		case strings.Contains(script, "MSBOOST_READY=1"):
 			return []byte("MSBOOST_READY=1\n"), nil
 		default:
-			return []byte("MSBOOST_BBR=enabled\nMSBOOST_STEP=Deploying msboost transactionally\nMSBOOST_CONFIG=" + base64.StdEncoding.EncodeToString([]byte(after)) + "\n"), nil
+			return []byte("MSBOOST_BBR=enabled\nMSBOOST_STEP=Deploying msboost transactionally\nMSBOOST_CONFIG=" + base64.StdEncoding.EncodeToString([]byte(after)) + "\n" + fail2banAnswer(script)), nil
 		}
 	}}
+}
+
+// An upgrade ends with the same SSH protection step as engine.go's upgrade,
+// shown as its own step, and refuses invalid options before connecting.
+func TestUpgradeProtectsSSH(t *testing.T) {
+	config := localTestConfig("8.8.8.8")
+	probe := func(context.Context, string, int) string { return "reachable" }
+	protect := &Fail2banOptions{ClientBits: 16}
+	remote := upgradeRemote(config, config, true)
+	var steps []Step
+	r := (&Engine{Remote: remote, TCPProbe: probe}).UpgradeWithProgress(context.Background(), Job{ID: "u1", Request: Request{SSH: localTestSSH(), Fail2ban: protect}, Script: localTestAsset()}, func(s Step) { steps = append(steps, s) })
+	if r.State != "succeeded" || r.Health.Fail2ban != "enabled" {
+		t.Fatalf("unexpected result: %+v %+v", r, r.Health)
+	}
+	if len(remote.scripts) != 3 || !strings.HasSuffix(remote.scripts[2], installedTail+fail2banStep(protect)) {
+		t.Fatal("the upgrade script does not end with the SSH protection step")
+	}
+	if n := len(steps); n < 2 || steps[n-2] != StepFail2ban || steps[n-1] != StepConfig {
+		t.Fatalf("steps %v", steps)
+	}
+
+	plain := upgradeRemote(config, config, true)
+	r = (&Engine{Remote: plain, TCPProbe: probe}).UpgradeWithProgress(context.Background(), Job{ID: "u2", Request: Request{SSH: localTestSSH()}, Script: localTestAsset()}, func(Step) {})
+	if r.State != "succeeded" || r.Health.Fail2ban != "" || strings.Contains(plain.scripts[2], "msboost_fail2ban") {
+		t.Fatalf("an upgrade without the option touched SSH protection: %+v", r.Health)
+	}
+
+	refused := upgradeRemote(config, config, true)
+	r = (&Engine{Remote: refused}).UpgradeWithProgress(context.Background(), Job{ID: "u3", Request: Request{SSH: localTestSSH(), Fail2ban: &Fail2banOptions{ClientBits: 8}}, Script: localTestAsset()}, func(Step) {})
+	if r.ErrorCode != "invalid_request" || len(refused.scripts) != 0 {
+		t.Fatalf("invalid options: %+v after %d scripts", r, len(refused.scripts))
+	}
 }
 
 func TestUpgradeKeepsTheConfiguration(t *testing.T) {

@@ -79,7 +79,9 @@ func (f *fakeServer) Run(ctx context.Context, s executor.SSH, script string) ([]
 	case strings.Contains(script, "MSBOOST_READY=1"):
 		return []byte("MSBOOST_READY=1\n"), nil
 	case strings.Contains(script, "MSBOOST_FORCE_FRESH=1"):
-		return []byte("MSBOOST_BBR=enabled\nMSBOOST_STEP=Installing required packages\nMSBOOST_CONFIG=" + b64(nodeConfig) + "\n"), nil
+		return []byte("MSBOOST_BBR=enabled\nMSBOOST_STEP=Installing required packages\nMSBOOST_CONFIG=" + b64(nodeConfig) + "\n" + fail2banAnswer(script)), nil
+	case strings.Contains(script, "MSBOOST_UDP=1 bash"): // an upgrade
+		return []byte("MSBOOST_BBR=enabled\nMSBOOST_STEP=Deploying msboost transactionally\nMSBOOST_CONFIG=" + b64(nodeConfig) + "\n" + fail2banAnswer(script)), nil
 	case strings.Contains(script, "MSBOOST_UDP_TARGET"):
 		return []byte("MSBOOST_UDP_TARGET=silent\n"), nil
 	case strings.Contains(script, "MSBOOST_RELAY_PORT"):
@@ -114,6 +116,15 @@ func (f *fakeServer) Run(ctx context.Context, s executor.SSH, script string) ([]
 		return []byte(cleanupReport(scope, !strings.Contains(script, b64("cleanup-preview")))), nil
 	}
 	return nil, errors.New("unexpected script")
+}
+
+// fail2banAnswer is what a script's SSH protection step prints when it
+// enables fail2ban.
+func fail2banAnswer(script string) string {
+	if !strings.Contains(script, "msboost_fail2ban()") {
+		return ""
+	}
+	return "MSBOOST_STEP=" + executor.Fail2banStepNote + "\nMSBOOST_FAIL2BAN=enabled\n"
 }
 
 type harness struct {
@@ -235,6 +246,34 @@ func TestDeploySavesTheConfigurationAndARecordWithoutSecrets(t *testing.T) {
 	// A second deploy replaces the server's own file instead of adding one.
 	if final, _ = h.wait(h.start(Deploy, h.server, Options{}).ID); final.Outcome.ConfigFile != "东京节点.json" {
 		t.Fatalf("redeploy wrote %s", final.Outcome.ConfigFile)
+	}
+}
+
+// Deploys and upgrades protect the server's SSH. The only address never
+// banned is this computer's, as the /16 network the server sees it in.
+func TestDeployAndUpgradeProtectSSHForThisComputer(t *testing.T) {
+	h := newHarness(t)
+	for _, kind := range []Kind{Deploy, Upgrade} {
+		final, steps := h.wait(h.start(kind, h.server, Options{}).ID)
+		if final.State != "succeeded" || final.Outcome.Health == nil || final.Outcome.Health.Fail2ban != "enabled" {
+			t.Fatalf("%s: %+v %+v", kind, final, final.Outcome)
+		}
+		if n := len(steps); n < 2 || steps[n-2] != int(executor.StepFail2ban) || steps[n-1] != int(executor.StepConfig) {
+			t.Fatalf("%s steps %v", kind, steps)
+		}
+		h.fake.mu.Lock()
+		var protected []string
+		for _, s := range h.fake.scripts {
+			if strings.Contains(s, "msboost_fail2ban()") {
+				protected = append(protected, s)
+			}
+		}
+		h.fake.scripts = nil
+		h.fake.mu.Unlock()
+		if len(protected) != 1 || !strings.Contains(protected[0], "f2b_allow=$(printf '%s' '' | base64 -d)") ||
+			!strings.Contains(protected[0], "f2b_client_bits=$(printf '%s' '"+b64("16")+"' | base64 -d)") {
+			t.Fatalf("%s: %d scripts with SSH protection, or not for this computer's /16 alone", kind, len(protected))
+		}
 	}
 }
 

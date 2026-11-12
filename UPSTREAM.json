@@ -1,7 +1,7 @@
 {
   "repository": "https://github.com/mozziexwz/node",
-  "tag": "v2.11.0",
-  "commit": "4e812c9bde5dac2be58a498875bedaaa73a5a402",
+  "tag": "v2.12.0",
+  "commit": "bd9357ccd2b0e0d3582e203095388414acc4bc33",
   "files": [
     {
       "path": "installers/gost.json",
@@ -47,12 +47,22 @@
     {
       "path": "internal/executor/engine.go",
       "from": "internal/executor/engine.go",
-      "sha256": "a0bc484f7a05cab7ecef95596c00217527de78bd497a504e78e9d6422cf6cdcf"
+      "sha256": "2fa9e4ac134a453827ed1f1fd44ddfebe05770d4e78dfd981932ec4a12119804"
     },
     {
       "path": "internal/executor/executor_test.go",
       "from": "internal/executor/executor_test.go",
       "sha256": "7857adbdc77003df5c18bae6586f47a4c8e45d842291beb4179f50ec6bd5ee80"
+    },
+    {
+      "path": "internal/executor/fail2ban.go",
+      "from": "internal/executor/fail2ban.go",
+      "sha256": "0476e52c9fd21fe98fa0bcd2d441232f442e4a5205f7710b83e6701f6c620a27"
+    },
+    {
+      "path": "internal/executor/fail2ban_test.go",
+      "from": "internal/executor/fail2ban_test.go",
+      "sha256": "ba2a1c26fb83c58b91d3bb06cbdda678dd2bf17509b34815027ec2bc0f08137f"
     },
     {
       "path": "internal/executor/free_relay_guard.py",
@@ -67,7 +77,7 @@
     {
       "path": "internal/executor/node_upgrade.go",
       "from": "internal/executor/node_upgrade.go",
-      "sha256": "ae5d62d3c896e7e4b0f98ceede760c43e1b9e38c2de9c70bc85a4b2dcb7aecd0"
+      "sha256": "e2bec7dd12140f98178bc60f7879baf7a6319dcef5871d56b96d0b794d623cb4"
     },
     {
       "path": "internal/executor/relay_cache.go",
@@ -132,12 +142,12 @@
     {
       "path": "internal/executor/types.go",
       "from": "internal/executor/types.go",
-      "sha256": "743cf4afde74ef0f306badd314ed75ac7ec2e5db94d442a5ae37b30770a18c68"
+      "sha256": "6524878c9c6e4d8ed43d567a7fbe71e3c1c5a75992e442a1c41387ea6e03ae45"
     },
     {
       "path": "internal/executor/validation.go",
       "from": "internal/executor/validation.go",
-      "sha256": "54a7724a6f35c66b0aeeb5207a12a9b22cc94a31f22d8ddd6706237af9ecc851"
+      "sha256": "222bc9486cd32d6a21d630f164ba0e97a13f43985342c9028ec9a49e709c325d"
     },
     {
       "path": "internal/executor/verify.go",
