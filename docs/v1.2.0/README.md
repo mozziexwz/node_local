@@ -71,4 +71,24 @@
 
 ## 7. 发布记录
 
-（发布后填写）
+### v1.2.0（2026-11-12）
+
+- 标签 `v1.2.0` 打在 main 的 06087ae（PR #11 的合并提交）上，CI 生成草稿 Release，附三个文件：
+
+  | 文件 | 大小 | SHA-256 |
+  |---|---|---|
+  | `MSBOOST-Local-v1.2.0-win-x64.zip` | 5,468,108 字节 | `cceb760c85c1f059bc8176284be0d266bebef8b666a43bb66c6924caca7b80a4` |
+  | `MSBOOST-Local-v1.2.0-source.zip` | 440,794 字节 | `bcf6ac72eb8b9d303967f52e586082f5654b2436292b251e700af75e99286ae1` |
+  | `SHA256SUMS.txt` | 197 字节 | 两个 zip 的 SHA-256 |
+
+- 发布前核对：
+  - `SHA256SUMS.txt` 与两个 zip 一致。
+  - 程序包里五个文件齐全，包内的 `MSBOOST-Local-SHA256SUMS.txt` 也对得上。
+  - `MSBOOST-Local-README.txt` 写的是 v1.2.0，CRLF 换行。
+  - exe 的版本资源：产品版本 1.2.0，文件版本 1.2.0.0；程序里的版本字符串是 `v1.2.0`。Windows 自带的读取方法读不出这些版本信息，v1.1.0 也一样，是资源表里语言代码页的写法问题。
+  - 源码包与标签逐字节一致。
+  - Release 说明与 `docs/releases/v1.2.0.md` 相同。
+  - 文件里没有测试服务器的地址。
+- 用户选择不做第 5 节的界面实测，直接发布。我核对完草稿后，按用户的要求公开。
+- 网盘和网站设置由用户自己处理，GitHub 上的发布不依赖它们。
+- Release 已公开发布：https://github.com/mozziexwz/node_local/releases/tag/v1.2.0
