@@ -2,7 +2,7 @@
 
 在自己的电脑上用 SSH 直接部署和管理 MSBOOST 节点与自备中转。SSH 密码或私钥只在本机内存里使用，不经过网站，也不保存到硬盘。
 
-> **状态：v1.2.0（部署节点时自动配置 fail2ban）准备发布；v1.1.0（节点和中转支持 UDP）已于 2026-11-01 发布；v1.0.0 于 2026-10-22 发布（M0–M3 完成）。** 规划见 [docs/MSBOOST本地版开发规划.md](docs/MSBOOST本地版开发规划.md)，各阶段说明在 [docs/m0](docs/m0/README.md)、[docs/m1](docs/m1/README.md)、[docs/m2](docs/m2/README.md)、[docs/m3](docs/m3/README.md)、[docs/v1.1.0](docs/v1.1.0/README.md)、[docs/v1.2.0](docs/v1.2.0/README.md)。
+> **状态：v1.2.0（部署节点时自动配置 fail2ban）已于 2026-11-12 发布；v1.1.0（节点和中转支持 UDP）于 2026-11-01 发布；v1.0.0 于 2026-10-22 发布（M0–M3 完成）。** 规划见 [docs/MSBOOST本地版开发规划.md](docs/MSBOOST本地版开发规划.md)，各阶段说明在 [docs/m0](docs/m0/README.md)、[docs/m1](docs/m1/README.md)、[docs/m2](docs/m2/README.md)、[docs/m3](docs/m3/README.md)、[docs/v1.1.0](docs/v1.1.0/README.md)、[docs/v1.2.0](docs/v1.2.0/README.md)。
 
 ## 能做什么
 
